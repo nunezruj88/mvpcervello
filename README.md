@@ -1,6 +1,6 @@
 # MVP Cervelló
 
-Web para el mismo LXC que Reental: **http://10.8.1.106:8083**. Código independiente en `/var/www/mvp-cervello`, datos en `/var/lib/mvp-cervello/mvp.sqlite3`, servicio propio y backend privado `127.0.0.1:8092`.
+Web para un LXC: **http://10.8.1.106:8083**. Código independiente en `/var/www/mvp-cervello`, datos en `/var/lib/mvp-cervello/mvp.sqlite3`, servicio propio y backend privado `127.0.0.1:8092`.
 
 ## Qué puedes hacer
 
@@ -23,7 +23,7 @@ CSV: UTF-8/BOM o Windows-1252, separador coma, punto y coma o tabulación. Máxi
 
 ## Instalar en el LXC
 
-Ejecuta los pasos siguientes como `root` dentro del LXC que aloja Reental. Comprueba que ambos puertos están libres:
+Ejecuta los pasos siguientes como `root` dentro del LXC. Comprueba que ambos puertos están libres:
 
 ```sh
 ss -ltnp 'sport = :8083'
@@ -31,7 +31,7 @@ ss -ltnp 'sport = :8092'
 nginx -t
 ```
 
-Si alguno está ocupado, elige otro antes de instalar y ajusta la configuración y la URL. Reental sigue usando 8082/8091. Para una primera instalación:
+Si alguno está ocupado, elige otro antes de instalar y ajusta la configuración y la URL. Para una primera instalación:
 
 ```sh
 apt-get update
@@ -62,7 +62,7 @@ curl -I http://127.0.0.1:8083/
 curl --fail -u administrador http://127.0.0.1:8083/health
 ```
 
-La primera petición devuelve 401; la segunda, tras la contraseña, `{"status":"ok"}`. Abre **http://10.8.1.106:8083** y sube tu archivo extraído del vídeo, dejándolo parcial si no contiene todo el partido. Comprueba además que Reental en `:8082` sigue respondiendo. El backend 8092 no se expone a la red. Si hay firewall, permitir solo 8083 desde tu LAN real. Esta configuración es para tu red local; no incluye publicación externa ni cambios de Tunnel.
+La primera petición devuelve 401; la segunda, tras la contraseña, `{"status":"ok"}`. Abre **http://10.8.1.106:8083** y sube tu archivo extraído del vídeo, dejándolo parcial si no contiene todo el partido. El backend 8092 no se expone a la red. Si hay firewall, permitir solo 8083 desde tu LAN real. Esta configuración es para tu red local; no incluye publicación externa ni cambios de Tunnel.
 
 ## Actualizar y respaldar
 
