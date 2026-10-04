@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MVP Cervelló · Estadísticas</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/"><span class="ball">◉</span><span>MVP<span class="brand-sub">CERVELLÓ</span></span></a>
+  <p class="nav-label">CUADERNO DE EQUIPO</p>
+  <nav aria-label="Secciones"><button data-view="team" class="active">◫ <span>Estadísticas del equipo</span></button><button data-view="player">◎ <span>Jugador M.N.L.</span><span class="tag">12</span></button><button data-view="upload">↑ <span>Cargar partido</span></button></nav>
+  <div class="side-bottom"><span class="status-dot"></span> Datos guardados en el servidor<p>Cada jugada cuenta.</p></div>
+</aside>
+<main>
+  <header class="top"><span>MVP Cervelló <span class="muted">/ Seguimiento de partidos</span></span><span class="season">BALONCESTO</span></header>
+  <div id="notice" role="status" hidden></div>
+  <section id="team" class="view">
+    <div class="heading"><div><p class="eyebrow">VISIÓN DE EQUIPO</p><h1>El partido, en números.</h1><p class="muted">Las acciones registradas del MVP Cervelló, reunidas en un solo lugar.</p></div><label class="select-label">PARTIDO<select id="team-match" aria-label="Partido del equipo"></select></label></div>
+    <div class="coverage" id="team-coverage"></div>
+    <div id="team-empty" class="empty" hidden><span class="empty-ball">◉</span><h2>Tu primer partido empieza aquí</h2><p>Sube el Excel o CSV extraído de una grabación para ver las estadísticas.</p><button class="primary" data-view="upload">Cargar un partido →</button></div>
+    <div id="team-content"><div id="team-kpis" class="kpis"></div>
+      <div class="grid"><article class="panel"><div class="panel-heading"><div><p class="eyebrow">ANOTACIÓN</p><h2>Puntos por jugador</h2></div><span class="chip">Acciones subidas</span></div><div id="ranking" class="bars"></div></article>
+      <article class="panel"><p class="eyebrow">RITMO DEL PARTIDO</p><h2>Puntos por período</h2><div id="periods" class="columns"></div></article></div>
+      <article class="panel"><div class="panel-heading"><div><p class="eyebrow">DETALLE DEL EQUIPO</p><h2>Jugadores</h2></div><a class="text-link" id="export-team" href="/api/export">Descargar acciones ↓</a></div><div id="players-table" class="table-wrap"></div></article>
+      <p class="footnote">Los tiros, porcentajes y faltas se calculan con las acciones importadas. Una estadística ausente en la grabación no permite conocer el total real.</p>
+    </div>
+  </section>
+  <section id="player" class="view" hidden>
+    <div class="heading"><div><p class="eyebrow">SEGUIMIENTO INDIVIDUAL</p><h1>Foco en M.N.L.</h1><p class="muted">Su aportación al equipo, partido a partido.</p></div><label class="select-label">PARTIDO<select id="player-match" aria-label="Partido de M.N.L."></select></label></div>
+    <div class="player-banner"><div class="jersey">12</div><div><p class="eyebrow">MVP CERVELLÓ</p><h2>M.N.L.</h2><p>Identificado por el nombre M.N.L. o el dorsal 12 dentro del MVP Cervelló.</p></div></div>
+    <div class="coverage" id="player-coverage"></div><div id="player-kpis" class="kpis"></div>
+    <div class="grid"><article class="panel"><p class="eyebrow">LANZAMIENTOS REGISTRADOS</p><h2>Su tiro, al detalle</h2><div id="shooting"></div><p class="footnote">Acierto sobre los intentos registrados. Si faltan tiros fallados en la fuente, este porcentaje no representa el acierto real.</p></article>
+    <article class="panel"><p class="eyebrow">EVOLUCIÓN</p><h2>Puntos por partido</h2><div id="trend" class="bars"></div></article></div>
+    <article class="panel"><div class="panel-heading"><div><p class="eyebrow">JUGADA A JUGADA</p><h2>Acciones de M.N.L.</h2></div><input type="search" id="action-search" placeholder="Buscar una acción…" aria-label="Buscar acciones de M.N.L."></div><div id="focus-table" class="table-wrap"></div></article>
+  </section>
+  <section id="upload" class="view" hidden>
+    <div class="heading"><div><p class="eyebrow">ARCHIVO DE PARTIDOS</p><h1>De la grabación al equipo.</h1><p class="muted">Sube las acciones extraídas del vídeo y revisa el partido antes de guardarlo.</p></div></div>
+    <div class="grid upload-grid"><article class="panel"><p class="eyebrow">01 / SELECCIONA EL ARCHIVO</p><h2>Añadir un partido</h2>
+    <form id="upload-form"><label class="dropzone" id="dropzone"><span class="upload-icon">↑</span><strong id="file-label">Selecciona o arrastra tu archivo</strong><span>Excel .xlsx o CSV · Máximo 10 MB</span><input id="file" type="file" accept=".xlsx,.csv" required></label>
+    <label class="check"><input id="complete" type="checkbox"><span>El archivo contiene todas las acciones del partido completo</span></label><p class="footnote">Deja esta casilla desmarcada para fragmentos. Subir otro archivo del mismo partido reemplaza sus acciones; no une fragmentos.</p>
+    <button class="primary" id="preview-button" type="submit">Revisar archivo →</button></form>
+    <a class="text-link template" href="/plantilla.csv" download>Descargar plantilla CSV ↓</a></article>
+    <article class="panel steps"><p class="eyebrow">UN FLUJO SENCILLO</p><h2>Guarda. Sube. Analiza.</h2><div><span>1</span><section><h3>Graba las jugadas</h3><p>Recorre la lista de la app dejando las acciones legibles y algo de solapamiento.</p></section></div><div><span>2</span><section><h3>Obtén el archivo</h3><p>Extrae el vídeo en este chat y guarda el Excel o CSV con una fila por acción.</p></section></div><div><span>3</span><section><h3>Construye tu historial</h3><p>Revisa el archivo y guárdalo. Cada partido queda disponible desde cualquier dispositivo que acceda a la web.</p></section></div></article></div>
+    <article id="preview" class="panel" hidden><p class="eyebrow">02 / REVISA Y CONFIRMA</p><h2 id="preview-title"></h2><div id="preview-info"></div><div id="preview-table" class="table-wrap"></div><label id="replace-label" class="check" hidden><input id="replace" type="checkbox"><span>Reemplazar el partido existente con estas acciones</span></label><button class="primary" id="save" type="button">Guardar partido</button></article>
+    <article class="panel"><p class="eyebrow">TUS IMPORTACIONES</p><h2>Partidos guardados</h2><div id="matches-table" class="table-wrap"></div></article>
+  </section>
+  <footer>MVP CERVELLÓ <span>Estadísticas a partir de tus jugadas.</span></footer>
+</main>
+</body></html>

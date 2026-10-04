@@ -1,0 +1,22 @@
+[Unit]
+Description=MVP Cervello basketball statistics
+After=network.target
+
+[Service]
+User=mvp-cervello
+Group=mvp-cervello
+WorkingDirectory=/var/www/mvp-cervello
+Environment=MVP_DB=/var/lib/mvp-cervello/mvp.sqlite3
+ExecStart=/var/www/mvp-cervello/.venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8092 --timeout 90 --access-logfile - app:application
+Restart=on-failure
+RestartSec=5
+StateDirectory=mvp-cervello
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target
