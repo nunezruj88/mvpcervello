@@ -11,6 +11,27 @@ def norm(value):
 def is_team(value):
     return norm(value) == norm(TEAM)
 
+def player_key(value):
+    return re.sub(r'[^\w]', '', norm(value))
+
+def team_matches(matches, team):
+    return [m for m in matches if norm(team) in (norm(m['home']), norm(m['away']))]
+
+def team_names(matches):
+    names = {}
+    for m in matches:
+        for name in (m['home'], m['away']):
+            names.setdefault(norm(name), name)
+    return sorted(names.values(), key=norm)
+
+def player_names(matches, team):
+    names = {}
+    for m in team_matches(matches, team):
+        for e in m['events']:
+            if norm(e['team']) == norm(team) and e['player']:
+                names.setdefault(player_key(e['player']), e['player'])
+    return [dict(id=k, name=v) for k, v in sorted(names.items(), key=lambda item: norm(item[1]))]
+
 def event_stats(events):
     result = dict(points=0, fouls=0, made1=0, missed1=0, made2=0, missed2=0,
                   made3=0, missed3=0, rebounds=0, assists=0, steals=0, turnovers=0, blocks=0, events=0)
@@ -32,22 +53,27 @@ def event_stats(events):
         result[f'percent{n}'] = round(100 * result[f'made{n}'] / attempted, 1) if attempted else None
     return result
 
-def summarize(matches):
-    events = [dict(e, match_id=m['id'], date=m['date'], opponent=m['away'] if is_team(m['home']) else m['home'])
-              for m in matches for e in m['events'] if is_team(e['team'])]
+def summarize(matches, team=TEAM, player='MNL'):
+    matches = team_matches(matches, team)
+    events = [dict(e, match_id=m['id'], date=m['date'], opponent=m['away'] if norm(m['home']) == norm(team) else m['home'])
+              for m in matches for e in m['events'] if norm(e['team']) == norm(team)]
     players = defaultdict(list)
     for e in events:
         if e['player']:
-            players[(e['number'], norm(e['player']))].append(e)
-    ranking = [dict(number=k[0], name=v[0]['player'], **event_stats(v)) for k, v in players.items()]
+            players[player_key(e['player'])].append(e)
+    ranking = []
+    for key, es in players.items():
+        numbers = sorted({e['number'] for e in es if e['number'] is not None})
+        ranking.append(dict(id=key, number=numbers[0] if len(numbers) == 1 else None,
+                            numbers=numbers, name=es[0]['player'], **event_stats(es)))
     ranking.sort(key=lambda p: (-p['points'], p['name']))
-    # Scope #12 to this team. Accept M.N.L. aliases even if the dorsal changes.
-    focus = [e for e in events if re.sub(r'[^A-Z]', '', norm(e['player'])) == 'MNL' or e['number'] == 12]
+    # The name identifies the player; jersey numbers can change or be reused.
+    focus = [e for e in events if player_key(e['player']) == player_key(player)]
     trend = []
     for m in matches:
         es = [e for e in events if e['match_id'] == m['id']]
         fs = [e for e in focus if e['match_id'] == m['id']]
-        trend.append(dict(id=m['id'], date=m['date'], opponent=m['away'] if is_team(m['home']) else m['home'],
+        trend.append(dict(id=m['id'], date=m['date'], opponent=m['away'] if norm(m['home']) == norm(team) else m['home'],
                           complete=m['complete'], team_points=sum(e['points'] for e in es),
                           focus_points=sum(e['points'] for e in fs)))
     periods = []

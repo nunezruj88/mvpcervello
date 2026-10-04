@@ -6,7 +6,8 @@ Web para un LXC: **http://10.8.1.106:8083**. Código independiente en `/var/www/
 
 - Cargar `.xlsx` (primera hoja, valores sin fórmulas) o `.csv` con las columnas del archivo generado a partir del vídeo. Revisión antes de guardar, validación y reemplazo transaccional por partido. Los archivos no se publican.
 - Consultar todos los partidos o uno concreto. Puntos por jugador y período, tiros libres/de 2/de 3, faltas y acciones.
-- Ver M.N.L.: nombre normalizado MNL o dorsal 12 **solo del MVP Cervelló**. Si cambia el dorsal o otro jugador utiliza el 12, ajustar el criterio en `stats.py`.
+- Seleccionar equipo y jugador en la parte superior. Los equipos y jugadores aparecen al importar sus partidos, incluidos partidos sin MVP Cervelló. Cada equipo muestra sus partidos y estadísticas. La exportación incluye las acciones de ambos equipos de los partidos seleccionados, para conservar el partido al reimportarlo.
+- Seguir a M.N.L. y a cualquier otro jugador en varios equipos, seleccionando cada equipo por separado. Se identifica por el nombre normalizado, nunca solo por el dorsal; M.N.L. y MNL se reconocen como el mismo nombre. Usa un nombre consistente y distinto para cada persona en los archivos. No se unen automáticamente alias diferentes ni se distinguen dos personas con el mismo nombre. Los dorsales pueden variar entre partidos.
 - Guardar los partidos en el servidor y exportar sus acciones a CSV. Los datos persisten entre reinicios y son compartidos por todos los usuarios autorizados.
 
 No convierte vídeos automáticamente. Primero se extrae el vídeo en el chat; después se sube el archivo resultante. Incluye un ejemplo con nombres ficticios en `examples/`, **no cargado automáticamente**. Los archivos reales y la base de datos permanecen fuera del repositorio.

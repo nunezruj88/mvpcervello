@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlsplit
 from wsgiref.simple_server import make_server
 from contextlib import contextmanager
 from importer import parse, ImportError
-from stats import summarize
+from stats import summarize, norm, TEAM, team_matches, team_names, player_names, player_key
 
 ROOT = Path(__file__).resolve().parent
 DB = Path(os.environ.get('MVP_DB', ROOT / 'data' / 'mvp.sqlite3'))
@@ -54,10 +54,18 @@ def application(env, start_response):
         if path == '/health' and method == 'GET': return reply({'status':'ok'})
         if path == '/api/data' and method == 'GET':
             all_matches = matches()
+            teams = team_names(all_matches)
+            requested_team = qs.get('team', [''])[0]
+            team = next((t for t in teams if norm(t) == norm(requested_team)), requested_team) if requested_team else next((t for t in teams if norm(t) == norm(TEAM)), teams[0] if teams else TEAM)
+            roster = player_names(all_matches, team)
+            requested_player = qs.get('player', [''])[0]
+            player = player_key(requested_player) if requested_player else next((p['id'] for p in roster if p['id'] == 'MNL'), roster[0]['id'] if roster else '')
+            scoped_matches = team_matches(all_matches, team)
             selected = qs.get('match', [''])[0]
-            chosen = [m for m in all_matches if not selected or m['id']==selected]
-            return reply(dict(matches=[brief(m) for m in all_matches], summary=summarize(chosen),
-                              events=[dict(e, match_id=m['id'], date=m['date']) for m in chosen for e in m['events']]))
+            chosen = [m for m in scoped_matches if not selected or m['id']==selected]
+            return reply(dict(teams=teams, selected_team=team, players=roster, selected_player=player,
+                              matches=[brief(m) for m in scoped_matches], summary=summarize(chosen, team, player),
+                              events=[dict(e, match_id=m['id'], date=m['date']) for m in chosen for e in m['events'] if norm(e['team']) == norm(team)]))
         if path == '/api/import' and method == 'POST':
             name = str(payload.get('filename','')).replace('\\','/').split('/')[-1]
             if not isinstance(payload.get('complete',False),bool): raise ImportError('Indicador de partido completo inválido.')
@@ -76,7 +84,9 @@ def application(env, start_response):
             return reply({'match':brief(match)}, '201 Created')
         if path == '/api/export' and method == 'GET':
             selected = qs.get('match',[''])[0]
-            result = [m for m in matches() if not selected or m['id']==selected]
+            team = qs.get('team',[''])[0]
+            result = team_matches(matches(), team) if team else matches()
+            result = [m for m in result if not selected or m['id']==selected]
             out = io.StringIO(newline='')
             w = csv.writer(out, delimiter=';')
             w.writerow(['Orden','Fecha_partido','Local','Visitante','Periodo','Tiempo_restante','Equipo','Dorsal','Jugador','Accion_original','Puntos_accion','Observaciones','Partido_completo'])

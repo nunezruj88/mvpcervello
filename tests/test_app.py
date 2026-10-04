@@ -19,9 +19,9 @@ class Tests(unittest.TestCase):
 
     def tearDown(self): self.temp.cleanup()
 
-    def call(self,path,method='GET',payload=None,origin=None):
+    def call(self,path,method='GET',payload=None,origin=None,query=''):
         body=json.dumps(payload or {}).encode()
-        env={'REQUEST_METHOD':method,'PATH_INFO':path,'QUERY_STRING':'','HTTP_HOST':'localhost:8092',
+        env={'REQUEST_METHOD':method,'PATH_INFO':path,'QUERY_STRING':query,'HTTP_HOST':'localhost:8092',
              'wsgi.input':io.BytesIO(body),'CONTENT_LENGTH':str(len(body))}
         if origin: env['HTTP_ORIGIN']=origin
         response={}

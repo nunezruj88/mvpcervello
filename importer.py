@@ -6,7 +6,7 @@ import re
 import zipfile
 from datetime import date, datetime, time
 from openpyxl import load_workbook
-from stats import norm, is_team
+from stats import norm
 
 HEADERS = ['Orden', 'Fecha_partido', 'Local', 'Visitante', 'Periodo', 'Tiempo_restante', 'Equipo',
            'Dorsal', 'Jugador', 'Accion_original', 'Puntos_Begues_periodo', 'Puntos_Cervello_periodo', 'Puntos_accion', 'Observaciones']
@@ -86,7 +86,6 @@ def parse(name, data, complete=False):
         except ValueError: raise ImportError(f'Fila {line}: fecha inválida; usa AAAA-MM-DD o DD/MM/AAAA.')
         home, away = text(r['Local']), text(r['Visitante'])
         if not home or not away or norm(home) == norm(away): raise ImportError(f'Fila {line}: equipos inválidos.')
-        if not (is_team(home) or is_team(away)): raise ImportError('El partido debe incluir a MVP Cervelló.')
         identities.add((dt, norm(home), norm(away)))
         p = norm(r['Periodo'])
         if not re.fullmatch(r'P(?:[1-9]|[1-9][0-9])', p): raise ImportError(f'Fila {line}: período inválido, usa P1, P2…')
