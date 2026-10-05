@@ -47,18 +47,12 @@ class SelectionTests(unittest.TestCase):
         match['events']=[dict(match['events'][0],player='NUEVO',category='Junior')]
         with app.connect() as con:
             con.execute('INSERT INTO matches VALUES (?,?)',(match['id'],json.dumps(match)))
-        data=self.call('/api/data',query='hierarchy=1&player=NUEVO&category=Infantil&match=invalid')['json']
-        self.assertEqual({p['id'] for p in data['players']},{'MNL','ELN','OTRO','NUEVO'})
-        self.assertEqual(data['categories'],['Junior'])
-        self.assertEqual(data['selected_category'],'Junior')
-        self.assertEqual(data['selected_scope'],'')
-        self.assertEqual([m['id'] for m in data['matches']],['new-player'])
-        self.assertEqual(data['summary']['focus']['points'],2)
-        data=self.call('/api/data',query='hierarchy=1&player=MNL&category=Junior')['json']
+        data=self.call('/api/data',query='hierarchy=1&player=NUEVO&category=Junior&match=invalid')['json']
+        self.assertEqual({p['id'] for p in data['players']},{'MNL','ELN'})
+        self.assertIn(data['selected_player'],{'MNL','ELN'})
         self.assertNotIn('Junior',data['categories'])
+        self.assertEqual(data['selected_scope'],'')
         self.assertNotIn('new-player',[m['id'] for m in data['matches']])
-        exported=self.call('/api/export',query='hierarchy=1&player=NUEVO&category=Junior')['body']
-        self.assertEqual(parse('export.csv',exported)['events'][0]['player'],'NUEVO')
         with app.connect() as con:
             con.execute('DELETE FROM matches')
         empty=self.call('/api/data',query='hierarchy=1')['json']

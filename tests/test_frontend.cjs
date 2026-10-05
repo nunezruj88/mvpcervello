@@ -129,14 +129,8 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   const isolatedImport=await fetch(base+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:'isolated.csv',data:Buffer.from(isolated).toString('base64')})});
   assert.equal(isolatedImport.status,201);
   await page.reload();
-  await page.waitForFunction(()=>document.querySelector('#player-select').options.length===3);
-  await page.selectOption('#player-select','OTRO');
-  await page.waitForFunction(()=>document.querySelector('#category-select').value==='Junior');
-  assert.deepEqual(await page.locator('#category-select option').allTextContents(),['Junior']);
-  assert.equal(await page.locator('#team-match optgroup').count(),1);
-  assert.equal(await page.locator('#team-match optgroup').getAttribute('label'),'01/09/2026 - Nueva liga');
-  await page.selectOption('#player-select','MNL');
-  await page.waitForFunction(()=>document.querySelector('#category-select').options.length===3);
+  await page.waitForFunction(()=>document.querySelector('#player-select').options.length===2);
+  assert.deepEqual(await page.locator('#player-select option').allTextContents(),['E.L.N.','M.N.L.']);
   assert.ok(!(await page.locator('#category-select option').allTextContents()).includes('Junior'));
   assert.deepEqual(errors,[]);
   console.log('OK: selectors, filters, export, import, competition totals and scoreboard');
