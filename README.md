@@ -22,6 +22,21 @@ Un archivo corresponde a un partido (fecha + local + visitante). La ordenación 
 
 CSV: UTF-8/BOM o Windows-1252, separador coma, punto y coma o tabulación. Máximo 10 MB y 20.000 registros. Fecha `AAAA-MM-DD` o `DD/MM/AAAA`, período `P1`, tiempo restante `MM:SS`. Las cabeceras obligatorias son `Fecha_partido`, `Local`, `Visitante`, `Periodo`, `Tiempo_restante`, `Equipo`, `Dorsal`, `Jugador`, `Accion_original`, `Puntos_accion`. El resto es opcional. La plantilla descargable contiene cabecera y una fila de ejemplo; elimina esa fila para tu archivo real. Los valores originales de marcadores no se utilizan para cálculos ni se conservan en la exportación; el dato autorizado son los puntos de cada acción.
 
+## Equipo y categoría en el fichero
+
+- `Equipo` identifica al club de la acción: por ejemplo, `CB BEGUES` o `MVP CERVELLÓ`. Debe coincidir con `Local` o `Visitante`.
+- `Categoria_equipo` identifica la categoría de esa acción, por ejemplo `Mini masculí`. Es opcional y se conserva por fila en SQLite al confirmar la importación, se muestra en la revisión y se incluye al exportar CSV.
+- Si falta la columna o su valor está vacío, se guarda una categoría vacía. Los partidos antiguos siguen siendo compatibles; para incorporar la categoría a sus acciones debes reimportar el fichero corregido y confirmar el reemplazo.
+- No renombres `Categoria_equipo` como `Equipo`: las dos columnas tienen significados distintos. Si ya hay dos cabeceras `Equipo`, renombra la última (la que contiene `Mini masculí`) a `Categoria_equipo`.
+- La categoría se conserva como dato de cada acción; los selectores actuales filtran por club y jugador, no por categoría.
+
+Ejemplo de cabecera y fila válidas:
+
+```csv
+Orden;Fecha_partido;Local;Visitante;Periodo;Tiempo_restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_Begues_periodo;Puntos_Cervello_periodo;Puntos_accion;Observaciones;Categoria_equipo
+1;2026-10-03;CB BEGUES;MVP CERVELLÓ;P1;06:00;CB BEGUES;5;JUGADOR 5;Salt guanyat;0;0;0;;Mini masculí
+```
+
 ## Instalar en el LXC
 
 Ejecuta los pasos siguientes como `root` dentro del LXC. Comprueba que ambos puertos están libres:

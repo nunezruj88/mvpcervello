@@ -54,7 +54,7 @@ $('upload-form').addEventListener('submit',async e=>{e.preventDefault();const fi
  pending={payload,result};$('preview-title').textContent=result.match.home+' – '+result.match.away;
  $('preview-info').replaceChildren(el('p',`${date(result.match.date)} · ${result.match.event_count} registros · ${result.match.complete?'Completo':'Parcial'}`),...result.match.warnings.map(w=>el('p',w,'footnote')));
  if(result.exists)$('preview-info').append(el('p','Este partido ya está guardado. Reemplazarlo sustituye todas sus acciones.'));
- table($('preview-table'),['Período','Tiempo','Equipo','Dorsal','Jugador','Acción','PTS'],result.events.map(e=>[e.period,e.clock,e.team,e.number,e.player,e.action,e.points]));
+ table($('preview-table'),['Período','Tiempo','Equipo','Categoría','Dorsal','Jugador','Acción','PTS'],result.events.map(e=>[e.period,e.clock,e.team,e.category||'—',e.number,e.player,e.action,e.points]));
  if(result.match.event_count>100)$('preview-info').append(el('p','La vista previa muestra los primeros 100 registros. Se guardarán todos.','footnote'));
  $('replace-label').hidden=!result.exists;$('preview').hidden=false;$('notice').hidden=true;$('preview').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){notice(error.message,true);}finally{$('preview-button').disabled=false;}});

@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 from stats import norm
 
 HEADERS = ['Orden', 'Fecha_partido', 'Local', 'Visitante', 'Periodo', 'Tiempo_restante', 'Equipo',
-           'Dorsal', 'Jugador', 'Accion_original', 'Puntos_Begues_periodo', 'Puntos_Cervello_periodo', 'Puntos_accion', 'Observaciones']
+           'Dorsal', 'Jugador', 'Accion_original', 'Puntos_Begues_periodo', 'Puntos_Cervello_periodo', 'Puntos_accion', 'Observaciones', 'Categoria_equipo']
 REQUIRED = ['Fecha_partido','Local','Visitante','Periodo','Tiempo_restante','Equipo','Dorsal','Jugador','Accion_original','Puntos_accion']
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -48,7 +48,8 @@ def read_rows(name, data):
     else: raise ImportError('Selecciona un archivo .xlsx o .csv.')
     if not values: raise ImportError('El archivo está vacío.')
     headers = [str(v or '').strip() for v in values[0]]
-    if len(set(headers)) != len(headers): raise ImportError('Hay cabeceras repetidas.')
+    repeated = sorted({h for h in headers if headers.count(h) > 1})
+    if repeated: raise ImportError('Hay cabeceras repetidas: ' + ', '.join(repeated) + '. Usa Equipo para el club y Categoria_equipo para la categoría.')
     missing = [h for h in REQUIRED if h not in headers]
     if missing: raise ImportError('Faltan columnas: ' + ', '.join(missing))
     result = []
@@ -106,7 +107,8 @@ def parse(name, data, complete=False):
         if not norm(action).startswith(('CISTELLA','INTENT FALLAT','PERSONAL','FALTA','SALT','FINAL','SURT','ENTRA','REBOT','ASSISTENCIA','RECUPERACIO','PERDUA','TAP')):
             unknown.add(action)
         events.append(dict(order=len(events)+1, period=p, clock=clock, team=team, number=number, player=player,
-                           action=action, points=points, notes=text(r.get('Observaciones'))))
+                           action=action, points=points, notes=text(r.get('Observaciones')),
+                           category=text(r.get('Categoria_equipo'))))
     if len(identities) != 1: raise ImportError('Cada archivo debe contener un solo partido.')
     dt, h, a = next(iter(identities))
     key = hashlib.sha256(f'{dt}|{h}|{a}'.encode()).hexdigest()[:24]

@@ -89,13 +89,13 @@ def application(env, start_response):
             result = [m for m in result if not selected or m['id']==selected]
             out = io.StringIO(newline='')
             w = csv.writer(out, delimiter=';')
-            w.writerow(['Orden','Fecha_partido','Local','Visitante','Periodo','Tiempo_restante','Equipo','Dorsal','Jugador','Accion_original','Puntos_accion','Observaciones','Partido_completo'])
+            w.writerow(['Orden','Fecha_partido','Local','Visitante','Periodo','Tiempo_restante','Equipo','Dorsal','Jugador','Accion_original','Puntos_accion','Observaciones','Partido_completo','Categoria_equipo'])
             def safe(v):
                 if isinstance(v,str) and v.startswith(('=','+','-','@')): return "'"+v
                 return v
             for m in result:
                 for e in m['events']:
-                    w.writerow([safe(v) for v in [e['order'],m['date'],m['home'],m['away'],e['period'],e['clock'],e['team'],e['number'],e['player'],e['action'],e['points'],e['notes'],'Sí' if m['complete'] else 'No']])
+                    w.writerow([safe(v) for v in [e['order'],m['date'],m['home'],m['away'],e['period'],e['clock'],e['team'],e['number'],e['player'],e['action'],e['points'],e['notes'],'Sí' if m['complete'] else 'No',e.get('category','')]])
             return reply(out.getvalue().encode('utf-8-sig'), mime='text/csv; charset=utf-8',
                          extra=[('Content-Disposition','attachment; filename="mvp-cervello-acciones.csv"')])
         if method=='GET' and path in ('/','/app.js','/style.css','/plantilla.csv'):
