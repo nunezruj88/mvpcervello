@@ -17,6 +17,17 @@ def player_key(value):
 def team_matches(matches, team):
     return [m for m in matches if norm(team) in (norm(m['home']), norm(m['away']))]
 
+def competition_matches(matches, competition=None, start=None):
+    if competition is None:
+        return matches
+    return [m for m in matches if norm(m.get('competition', '')) == norm(competition)
+            and m.get('competition_date', '') == (start or '')]
+
+def scoreboard(match):
+    return dict(home=match['home'], away=match['away'], complete=match['complete'],
+                home_points=sum(e['points'] for e in match['events'] if norm(e['team']) == norm(match['home'])),
+                away_points=sum(e['points'] for e in match['events'] if norm(e['team']) == norm(match['away'])))
+
 def team_names(matches):
     names = {}
     for m in matches:

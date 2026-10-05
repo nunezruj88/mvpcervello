@@ -11,6 +11,7 @@ from wsgiref.simple_server import make_server
 from contextlib import contextmanager
 from importer import parse, ImportError
 from stats import summarize, norm, TEAM, team_matches, team_names, player_names, player_key, category_names, category_matches, TRACKED_PLAYERS, is_team
+from stats import competition_matches, scoreboard
 
 ROOT = Path(__file__).resolve().parent
 DB = Path(os.environ.get('MVP_DB', ROOT / 'data' / 'mvp.sqlite3'))
@@ -62,10 +63,12 @@ def application(env, start_response):
                 player = 'MNL'
             scoped_matches = category_matches(all_matches, category)
             selected = qs.get('match', [''])[0]
-            chosen = [m for m in scoped_matches if not selected or m['id'] == selected]
+            competition_scope = competition_matches(scoped_matches, qs.get('competition', [None])[0], qs.get('competition_date', [''])[0])
+            chosen = [m for m in competition_scope if not selected or m['id'] == selected]
             return reply(dict(categories=categories, selected_category=category, selected_team=TEAM,
                               players=TRACKED_PLAYERS, selected_player=player,
                               matches=[brief(m) for m in scoped_matches], summary=summarize(chosen, TEAM, player),
+                              scoreboard=scoreboard(chosen[0]) if selected and len(chosen) == 1 else None,
                               events=[dict(e, match_id=m['id'], date=m['date']) for m in chosen for e in m['events'] if is_team(e['team'])]))
         if path == '/api/import' and method == 'POST':
             name = str(payload.get('filename','')).replace('\\','/').split('/')[-1]
@@ -96,6 +99,7 @@ def application(env, start_response):
             team = qs.get('team',[''])[0]
             category = qs.get('category', [None])[0]
             result = category_matches(matches(), category) if category is not None else (team_matches(matches(), team) if team else matches())
+            result = competition_matches(result, qs.get('competition', [None])[0], qs.get('competition_date', [''])[0])
             result = [m for m in result if not selected or m['id']==selected]
             out = io.StringIO(newline='')
             w = csv.writer(out, delimiter=';')
