@@ -14,6 +14,28 @@ function badge(complete){return el('span',complete?'Completo':'Parcial',complete
 function coverage(id,s){const e=$(id);e.classList.toggle('complete',s.matches>0&&!s.partial);e.textContent=!s.matches?'Sin partidos importados.':s.partial?`${s.partial} ${s.partial===1?'partido parcial':'partidos parciales'} en la selección. Las cifras corresponden únicamente a las acciones subidas.`:`${s.matches} ${s.matches===1?'partido marcado':'partidos marcados'} como completo${s.matches===1?'':'s'}. Estadísticas según las acciones registradas.`;}
 function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-row'+(focus?' focus':'')),name=el('div',label,'bar-label');name.append(el('span',sub));const track=el('div',undefined,'bar-track'),fill=el('div',undefined,'bar-fill');fill.style.width=(max?value/max*100:0)+'%';track.append(fill);row.append(name,track,el('strong',fmt(value)));return row;}
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
+let playerSort={column:2,direction:-1};
+function renderPlayers(){
+ const headers=['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Acciones'];
+ const keys=['name','number','points','made1','made2','made3','fouls','events'];
+ const {column,direction}=playerSort;
+ const players=[...data.summary.players].sort((a,b)=>{
+  const av=a[keys[column]],bv=b[keys[column]];
+  if(av==null||bv==null)return av==bv?0:av==null?1:-1;
+  let result=column===0?av.localeCompare(bv,'es',{numeric:true,sensitivity:'base'}):av-bv;
+  if(!result&&column>=3&&column<=5)result=a['attempts'+(column-2)]-b['attempts'+(column-2)];
+  return result*direction||a.name.localeCompare(b.name,'es',{sensitivity:'base'});
+ });
+ table($('players-table'),headers,players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.events]),1);
+ $('players-table').querySelectorAll('th').forEach((th,i)=>{
+  const active=i===column;
+  th.setAttribute('scope','col');th.setAttribute('aria-sort',active?(direction===1?'ascending':'descending'):'none');
+  const button=el('button',headers[i]+(active?(direction===1?' ↑':' ↓'):' ↕'),'sort-column');
+  button.title=i>=3&&i<=5?'Ordenar por aciertos; en empate, por intentos':'Ordenar por '+headers[i];
+  button.addEventListener('click',()=>{playerSort={column:i,direction:active?-direction:i===0||i===1?1:-1};renderPlayers();});
+  th.replaceChildren(button);
+ });
+}
 function selectionQuery(){
  const query=new URLSearchParams();if(category!==null)query.set('category',category);
  if(selected.startsWith('competition:')){const [start,name]=JSON.parse(selected.slice(12));query.set('competition',name);query.set('competition_date',start);}
@@ -66,7 +88,7 @@ function render(){const s=data.summary;
   for(const [points,name,cls] of [[p.team_points,'MVP Cervelló',''],[p.opponent_points||0,rival,'opponent']]){const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar '+cls);b.style.height=(points/pmax*150)+'px';c.title=`${p.period} · ${name}: ${points} puntos registrados`;c.append(el('strong',fmt(points)),b);bars.append(c);}
   group.append(bars,el('span',p.period));return group;
  }));
- table($('players-table'),['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Acciones'],s.players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.events]),1);
+ renderPlayers();
  $('export-team').href='/api/export?'+selectionQuery();
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
  renderFocus();
