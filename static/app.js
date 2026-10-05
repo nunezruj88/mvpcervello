@@ -43,7 +43,7 @@ $('category-select').addEventListener('change',async e=>{category=e.target.value
 $('player-select').addEventListener('change',async e=>{player=e.target.value;await refresh();});
 for(const id of ['team-match','player-match'])$(id).addEventListener('change',async e=>{selected=e.target.value;await refresh();});
 $('action-search').addEventListener('input',()=>{if(data)renderFocus();});
-function resetPreview(){pending=null;$('preview').hidden=true;$('replace').checked=false;}
+function resetPreview(){$('upload-notice').hidden=true;pending=null;$('preview').hidden=true;$('replace').checked=false;}
 $('file').addEventListener('change',()=>{$('file-label').textContent=$('file').files[0]?.name||'Selecciona o arrastra tu archivo';resetPreview();});
 $('complete').addEventListener('change',resetPreview);
 const dz=$('dropzone');for(const event of ['dragenter','dragover'])dz.addEventListener(event,e=>{e.preventDefault();dz.classList.add('drag');});for(const event of ['dragleave','drop'])dz.addEventListener(event,e=>{e.preventDefault();dz.classList.remove('drag');});
@@ -59,6 +59,6 @@ $('upload-form').addEventListener('submit',async e=>{e.preventDefault();const fi
  $('replace-label').hidden=!result.exists;$('preview').hidden=false;$('notice').hidden=true;$('preview').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){notice(error.message,true);}finally{$('preview-button').disabled=false;}});
 $('save').addEventListener('click',async()=>{if(!pending)return;if(pending.result.exists&&!$('replace').checked){notice('Marca reemplazar para actualizar este partido.',true);return;}$('save').disabled=true;try{
- const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,replace:$('replace').checked})});selected=result.match.id;category=result.match.category;resetPreview();$('upload-form').reset();$('file-label').textContent='Selecciona o arrastra tu archivo';await refresh();show('team');notice('Partido guardado. Las estadísticas ya están actualizadas.');window.scrollTo({top:0,behavior:'smooth'});
+ const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,replace:$('replace').checked})});selected=result.match.id;category=result.match.category;resetPreview();$('upload-form').reset();$('file-label').textContent='Selecciona o arrastra tu archivo';await refresh();show('upload');$('upload-notice').textContent='Partido guardado. Las estadísticas ya están actualizadas.';$('upload-notice').hidden=false;window.scrollTo({top:0,behavior:'smooth'});
  }catch(error){notice(error.message,true);}finally{$('save').disabled=false;}});
 show(['team','player','upload'].includes(location.hash.slice(1))?location.hash.slice(1):'team');refresh();
