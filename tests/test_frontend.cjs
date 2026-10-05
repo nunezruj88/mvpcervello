@@ -17,7 +17,9 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   return Buffer.from('Fecha_partido;Local;Visitante;Periodo;Tiempo_restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_accion;Categoria_equipo;Competicion;Fecha_competicion\n' +
     [['M.N.L.', points], ['E.L.N.', 1]].map(([name, score])=>
       `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;05:00;MVP CERVELLÓ;12;${name};Cistella de ${score};${score};${category};${competition};${start}\n`).join('') +
-      `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;04:00;CB BEGUES;8;RIVAL;Cistella de 2;2;${category};${competition};${start}\n`);
+      `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;04:00;CB BEGUES;8;RIVAL;Cistella de 2;2;${category};${competition};${start}\n` +
+      [['MVP CERVELLÓ','EQUIPO','Temps mort'],['CB BEGUES','EQUIPO','Temps mort'],['CB BEGUES','EQUIPO','Temps mort'],['MVP CERVELLÓ','M.N.L.','Personal'],['CB BEGUES','RIVAL','Personal']].map(([team,name,action])=>
+      `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;03:00;${team};;${name};${action};0;${category};${competition};${start}\n`).join(''));
 }
 (async()=>{
   for(let i=0;i<100;i++) {
@@ -77,6 +79,9 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.ok((await page.locator('#team-shooting').textContent()).includes('Tiros libres'));
   assert.ok((await page.locator('#team-shooting').textContent()).includes('Tiros de 2'));
   assert.ok((await page.locator('#team-shooting').textContent()).includes('Triples'));
+  assert.equal(await page.locator('#team-fouls strong').textContent(),'1 – 1');
+  assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['1','2']);
+  assert.ok(!(await page.locator('#players-table').textContent()).includes('EQUIPO'));
   await page.locator('#players-table th').nth(2).locator('button').click();
   assert.deepEqual(await page.locator('#players-table tbody tr td:nth-child(3)').allTextContents(),['1','3']);
   assert.equal(await page.locator('#players-table th').nth(2).getAttribute('aria-sort'),'ascending');
@@ -91,6 +96,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.selectOption('#team-match',competition);
   await page.waitForFunction(()=>document.querySelector('#player-kpis strong').textContent==='6');
   assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['8','4']);
+  assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['2','4']);
   assert.equal(await page.locator('#match-scoreboard').count(),0);
   assert.ok((await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
   assert.ok((await page.locator('#export-team').getAttribute('href')).includes('competition_date=2026-09-01'));
