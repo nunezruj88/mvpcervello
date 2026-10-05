@@ -59,7 +59,13 @@ function render(){const s=data.summary;
  for(const [n,label] of [[1,'Tiros libres'],[2,'Tiros de 2'],[3,'Triples']]){const row=el('p',label+': ');row.append(el('b',`${s.team['made'+n]}/${s.team['attempts'+n]}`));shots.append(row);}
  shots.append(el('p','Aciertos / intentos registrados'));$('team-kpis').append(shots);
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
- const pmax=Math.max(1,...s.periods.map(p=>p.team_points));$('periods').replaceChildren(...s.periods.map(p=>{const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar');b.style.height=(p.team_points/pmax*150)+'px';c.append(el('strong',fmt(p.team_points)),b,el('span',p.period));return c;}));
+ const rival=data.scoreboard?(s.trend[0]?.opponent||'Rival'):'Rivales';
+ $('period-legend').replaceChildren(el('span','MVP Cervelló','legend-team'),el('span',rival,'legend-opponent'));
+ const pmax=Math.max(1,...s.periods.flatMap(p=>[p.team_points,p.opponent_points||0]));
+ $('periods').replaceChildren(...s.periods.map(p=>{const group=el('div',undefined,'period-group'),bars=el('div',undefined,'period-bars');
+  for(const [points,name,cls] of [[p.team_points,'MVP Cervelló',''],[p.opponent_points||0,rival,'opponent']]){const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar '+cls);b.style.height=(points/pmax*150)+'px';c.title=`${p.period} · ${name}: ${points} puntos registrados`;c.append(el('strong',fmt(points)),b);bars.append(c);}
+  group.append(bars,el('span',p.period));return group;
+ }));
  table($('players-table'),['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Acciones'],s.players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.events]),1);
  $('export-team').href='/api/export?'+selectionQuery();
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
@@ -90,3 +96,4 @@ $('save').addEventListener('click',async()=>{if(!pending)return;if(pending.resul
  const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,replace:$('replace').checked})});selected=result.match.id;category=result.match.category;resetPreview();$('upload-form').reset();$('file-label').textContent='Selecciona o arrastra tu archivo';await refresh();show('upload');$('upload-notice').textContent='Partido guardado. Las estadísticas ya están actualizadas.';$('upload-notice').hidden=false;window.scrollTo({top:0,behavior:'smooth'});
  }catch(error){notice(error.message,true);}finally{$('save').disabled=false;}});
 show(['team','player','upload'].includes(location.hash.slice(1))?location.hash.slice(1):'team');refresh();
+

@@ -4,3 +4,5 @@
 
 
 .context-selectors{display:flex;flex-wrap:wrap;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}.context-selectors label{flex:1;min-width:180px}.context-selectors select{width:100%;max-width:none}
+
+.period-group{flex:1;min-width:72px;text-align:center;font-size:11px;color:var(--muted);display:flex;flex-direction:column;justify-content:flex-end}.period-bars{display:flex;align-items:flex-end;gap:6px}.period-bars .column{color:var(--ink)}.period-bars .col-bar{width:85%}.col-bar.opponent{background:var(--gold)}.period-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.period-legend span:before{content:'';display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:2px;background:#87a9de}.period-legend .legend-opponent:before{background:var(--gold)}
