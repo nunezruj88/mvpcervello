@@ -48,7 +48,10 @@ def read_rows(name, data):
     else: raise ImportError('Selecciona un archivo .xlsx o .csv.')
     if not values: raise ImportError('El archivo está vacío.')
     headers = [str(v or '').strip() for v in values[0]]
-    if len(set(headers)) != len(headers): raise ImportError('Hay cabeceras repetidas.')
+    if len(set(headers)) != len(headers):
+        if headers.count('Equipo') > 1:
+            raise ImportError('Hay dos cabeceras Equipo. Renombra la columna de categoría a Categoria_equipo.')
+        raise ImportError('Hay cabeceras repetidas.')
     missing = [h for h in REQUIRED if h not in headers]
     if missing: raise ImportError('Faltan columnas: ' + ', '.join(missing))
     result = []
@@ -109,15 +112,23 @@ def parse(name, data, complete=False):
         if not norm(action).startswith(('CISTELLA','INTENT FALLAT','PERSONAL','FALTA','SALT','FINAL','SURT','ENTRA','REBOT','ASSISTENCIA','RECUPERACIO','PERDUA','TAP','TEMPS MORT')):
             unknown.add(action)
         events.append(dict(order=len(events)+1, period=p, clock=clock, team=team, number=number, player=player,
-                           action=action, points=points, notes=text(r.get('Observaciones'))))
+                           action=action, points=points, notes=text(r.get('Observaciones')),
+                           category=text(r.get('Categoria_equipo'))))
     if len(identities) != 1: raise ImportError('Cada archivo debe contener un solo partido.')
     dt, h, a = next(iter(identities))
-    key = hashlib.sha256(f'{dt}|{h}|{a}'.encode()).hexdigest()[:24]
+    identity = f'{dt}|{h}|{a}'
+    legacy_id = hashlib.sha256(identity.encode()).hexdigest()[:24]
+    categories = {norm(e['category']) for e in events if is_team(e['team'])}
+    if len(categories) > 1:
+        raise ImportError('Cada archivo debe contener una sola categoría del MVP Cervelló, igual en todas sus acciones.')
+    category = next(iter(categories), '')
+    key = hashlib.sha256(f'{identity}|{category}'.encode()).hexdigest()[:24] if category else legacy_id
     warnings = ['El marcador de cada tarjeta corresponde al período, no al acumulado del partido.']
     if not complete: warnings.append('Importación parcial: las estadísticas solo representan las acciones subidas.')
     if unknown: warnings.append('Acciones conservadas sin clasificación estadística: ' + ', '.join(sorted(unknown)))
     # Remove overlaps only across recordings before exporting. Identical actions may be legitimate.
     duplicates = len(events) - len({(e['period'],e['clock'],norm(e['team']),e['number'],norm(e['action'])) for e in events})
     if duplicates: warnings.append(f'{duplicates} acciones coinciden en período, tiempo, jugador y tipo. Revisar: se han conservado.')
-    return dict(id=key, date=dt, home=text(rows[0]['Local']), away=text(rows[0]['Visitante']), complete=bool(complete),
+    display_category = next((e['category'] for e in events if is_team(e['team'])), '')
+    return dict(id=key, legacy_id=legacy_id, category=display_category, date=dt, home=text(rows[0]['Local']), away=text(rows[0]['Visitante']), complete=bool(complete),
                 filename=name, events=events, warnings=warnings, source_hash=hashlib.sha256(data).hexdigest())
