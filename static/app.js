@@ -14,6 +14,20 @@ function badge(complete){return el('span',complete?'Completo':'Parcial',complete
 function coverage(id,s){const e=$(id);e.classList.toggle('complete',s.matches>0&&!s.partial);e.textContent=!s.matches?'Sin partidos importados.':s.partial?`${s.partial} ${s.partial===1?'partido parcial':'partidos parciales'} en la selección. Las cifras corresponden únicamente a las acciones subidas.`:`${s.matches} ${s.matches===1?'partido marcado':'partidos marcados'} como completo${s.matches===1?'':'s'}. Estadísticas según las acciones registradas.`;}
 function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-row'+(focus?' focus':'')),name=el('div',label,'bar-label');name.append(el('span',sub));const track=el('div',undefined,'bar-track'),fill=el('div',undefined,'bar-fill');fill.style.width=(max?value/max*100:0)+'%';track.append(fill);row.append(name,track,el('strong',fmt(value)));return row;}
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
+function matchOptions(matches){
+ const groups=new Map();
+ for(const m of matches){
+  const name=m.competition||'', start=m.competition_date||'';
+  const key=JSON.stringify([start,name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim()]);
+  if(!groups.has(key))groups.set(key,{name,start,matches:[]});
+  groups.get(key).matches.push(m);
+ }
+ return [...groups.values()].sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name,'es')).map(g=>{
+  const group=el('optgroup');group.label=g.name?`${g.start?date(g.start):'Sin fecha'} - ${g.name}`:'Sin competición';
+  group.append(...g.matches.map(m=>new Option(`${date(m.date)} · ${m.home} – ${m.away}${m.complete?'':' (parcial)'}`,m.id)));
+  return group;
+ });
+}
 function renderFocus(){const s=data.summary, f=s.focus;coverage('player-coverage',s);kpis('player-kpis',[
  ['Puntos registrados',f.points,'De las acciones importadas'],['Canastas de 2',f.made2,`${f.missed2} fallos registrados`],['Faltas personales',f.fouls,'Una falta por acción'],['Acciones',f.events,'Del jugador en la selección']]);
  $('shooting').replaceChildren(...[1,2,3].map(n=>{const box=el('div',undefined,'shot'),text=el('div');text.append(el('h3',n===1?'Tiros libres':`Tiros de ${n}`),el('p',`${f['made'+n]} ${f['made'+n]===1?'acierto':'aciertos'} / ${f['attempts'+n]} ${f['attempts'+n]===1?'intento registrado':'intentos registrados'}`));box.append(text,el('strong',f['percent'+n]===null?'—':fmt(f['percent'+n])+' %'));const track=el('div',undefined,'bar-track'),fill=el('div',undefined,'bar-fill');fill.style.width=(f['percent'+n]||0)+'%';track.append(fill);box.append(track);return box;}));
@@ -28,7 +42,7 @@ function render(){const s=data.summary;
  $('focus-heading').textContent='Foco en '+focus.name;$('focus-name').textContent=focus.name;
  $('focus-team').textContent=data.selected_team+' · '+(category||'Sin categoría');
  $('focus-number').textContent=stats?.number??'—';$('focus-actions-title').textContent='Acciones de '+focus.name;
- for(const id of ['team-match','player-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...data.matches.map(m=>new Option(`${date(m.date)} · ${m.home} – ${m.away}${m.complete?'':' (parcial)'}`,m.id)));select.value=selected;}
+ for(const id of ['team-match','player-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...matchOptions(data.matches));select.value=selected;}
  coverage('team-coverage',s);$('team-empty').hidden=!!s.matches;$('team-content').hidden=!s.matches;
  kpis('team-kpis',[['Partidos importados',s.matches,`${s.partial} con grabación parcial`],['Puntos registrados',s.team.points,'MVP Cervelló'],['Jugadores con acciones',s.players.length,'En los archivos seleccionados'],['Faltas personales',s.team.fouls,'Registradas para el equipo']]);
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
@@ -53,6 +67,7 @@ $('upload-form').addEventListener('submit',async e=>{e.preventDefault();const fi
  const payload={filename:file.name,data:await encoded(file),complete:$('complete').checked};const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,preview:true})});
  pending={payload,result};$('preview-title').textContent=result.match.home+' – '+result.match.away;
  $('preview-info').replaceChildren(el('p',`${date(result.match.date)} · ${result.match.event_count} registros · ${result.match.complete?'Completo':'Parcial'}`),...result.match.warnings.map(w=>el('p',w,'footnote')));
+ if(result.match.competition)$('preview-info').prepend(el('p',`${date(result.match.competition_date)} - ${result.match.competition}`));
  if(result.exists)$('preview-info').append(el('p','Este partido ya está guardado. Reemplazarlo sustituye todas sus acciones.'));
  table($('preview-table'),['Período','Tiempo','Equipo','Categoría','Dorsal','Jugador','Acción','PTS'],result.events.map(e=>[e.period,e.clock,e.team,e.category||'Sin categoría',e.number,e.player,e.action,e.points]));
  if(result.match.event_count>100)$('preview-info').append(el('p','La vista previa muestra los primeros 100 registros. Se guardarán todos.','footnote'));
