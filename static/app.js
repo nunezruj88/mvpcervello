@@ -16,8 +16,8 @@ function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
 let playerSort={column:2,direction:-1};
 function renderPlayers(){
- const headers=['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Acciones'];
- const keys=['name','number','points','made1','made2','made3','fouls','events'];
+ const headers=['Jugador','Dorsal','PTS','TL','T2','T3','Faltas'];
+ const keys=['name','number','points','made1','made2','made3','fouls'];
  const {column,direction}=playerSort;
  const players=[...data.summary.players].sort((a,b)=>{
   const av=a[keys[column]],bv=b[keys[column]];
@@ -26,7 +26,7 @@ function renderPlayers(){
   if(!result&&column>=3&&column<=5)result=a['attempts'+(column-2)]-b['attempts'+(column-2)];
   return result*direction||a.name.localeCompare(b.name,'es',{sensitivity:'base'});
  });
- table($('players-table'),headers,players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.events]),1);
+ table($('players-table'),headers,players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls]),1);
  $('players-table').querySelectorAll('th').forEach((th,i)=>{
   const active=i===column;
   th.setAttribute('scope','col');th.setAttribute('aria-sort',active?(direction===1?'ascending':'descending'):'none');
@@ -83,6 +83,7 @@ function render(){const s=data.summary;
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
  const rival=data.scoreboard?(s.trend[0]?.opponent||'Rival'):'Rivales';
  const fouls=el('div',undefined,'kpi');fouls.id='team-fouls';fouls.append(el('span','Faltas personales','label'),el('strong',`${fmt(s.team.fouls)} – ${fmt(s.opponent.fouls)}`),el('p',`MVP Cervelló – ${rival}`),el('p','Faltas de las acciones importadas'));$('team-kpis').append(fouls);
+ const timeoutCard=el('div',undefined,'kpi timeout-card');timeoutCard.append(el('span','Tiempos muertos solicitados','label'));const timeoutChart=el('div');timeoutChart.id='timeouts';timeoutCard.append(timeoutChart);$('team-kpis').append(timeoutCard);
  const timeoutMax=Math.max(1,s.team.timeouts,s.opponent.timeouts);
  $('timeouts').replaceChildren(bar('MVP Cervelló','Tiempos muertos registrados',s.team.timeouts,timeoutMax),bar(rival,'Tiempos muertos registrados',s.opponent.timeouts,timeoutMax));
  $('period-legend').replaceChildren(el('span','MVP Cervelló','legend-team'),el('span',rival,'legend-opponent'));

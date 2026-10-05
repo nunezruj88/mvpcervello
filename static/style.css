@@ -8,3 +8,5 @@
 .period-group{flex:1;min-width:72px;text-align:center;font-size:11px;color:var(--muted);display:flex;flex-direction:column;justify-content:flex-end}.period-bars{display:flex;align-items:flex-end;gap:6px}.period-bars .column{color:var(--ink)}.period-bars .col-bar{width:85%}.col-bar.opponent{background:var(--gold)}.period-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.period-legend span:before{content:'';display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:2px;background:#87a9de}.period-legend .legend-opponent:before{background:var(--gold)}
 
 .sort-column{border:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;padding:6px 0;cursor:pointer;white-space:nowrap}.sort-column:hover{color:var(--ink)}.sort-column:focus-visible{outline:2px solid #87a9de;outline-offset:4px}
+
+.timeout-card .bar-row{grid-template-columns:minmax(0,1fr) 28px;gap:6px;margin:10px 0}.timeout-card .bar-label{grid-column:1 / -1;overflow-wrap:anywhere}.timeout-card .bar-row strong{font-size:18px;letter-spacing:0}.timeout-card .bar-label span{display:none}
