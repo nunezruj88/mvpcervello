@@ -42,6 +42,30 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(match['id'], self.fixture_matches[0]['id'])
         self.assertEqual(summarize([match])['focus']['points'], 2)
 
+    def test_dynamic_player_category_match_relationship(self):
+        match=dict(self.fixture_matches[0],id='new-player',competition='Liga junior',competition_date='2026-09-01')
+        match['events']=[dict(match['events'][0],player='NUEVO',category='Junior')]
+        with app.connect() as con:
+            con.execute('INSERT INTO matches VALUES (?,?)',(match['id'],json.dumps(match)))
+        data=self.call('/api/data',query='hierarchy=1&player=NUEVO&category=Infantil&match=invalid')['json']
+        self.assertEqual({p['id'] for p in data['players']},{'MNL','ELN','OTRO','NUEVO'})
+        self.assertEqual(data['categories'],['Junior'])
+        self.assertEqual(data['selected_category'],'Junior')
+        self.assertEqual(data['selected_scope'],'')
+        self.assertEqual([m['id'] for m in data['matches']],['new-player'])
+        self.assertEqual(data['summary']['focus']['points'],2)
+        data=self.call('/api/data',query='hierarchy=1&player=MNL&category=Junior')['json']
+        self.assertNotIn('Junior',data['categories'])
+        self.assertNotIn('new-player',[m['id'] for m in data['matches']])
+        exported=self.call('/api/export',query='hierarchy=1&player=NUEVO&category=Junior')['body']
+        self.assertEqual(parse('export.csv',exported)['events'][0]['player'],'NUEVO')
+        with app.connect() as con:
+            con.execute('DELETE FROM matches')
+        empty=self.call('/api/data',query='hierarchy=1')['json']
+        self.assertEqual(empty['players'],[])
+        self.assertEqual(empty['categories'],[])
+        self.assertEqual(empty['matches'],[])
+
     def test_unknown_and_uncategorized(self):
         data = self.call('/api/data', query='category=DESCONOCIDA')['json']
         self.assertEqual(data['summary']['matches'], 0)

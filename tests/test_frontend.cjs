@@ -37,7 +37,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.goto(base);
   await page.waitForFunction(()=>document.querySelector('#category-select').options.length===2);
   assert.deepEqual(await page.locator('#category-select option').allTextContents(),['Infantil','Mini masculí']);
-  assert.deepEqual(await page.locator('#player-select option').allTextContents(),['M.N.L.','E.L.N.']);
+  assert.deepEqual(await page.locator('#player-select option').allTextContents(),['E.L.N.','M.N.L.']);
   await page.selectOption('#category-select','Mini masculí');
   await page.waitForFunction(()=>document.querySelector('#player-kpis strong').textContent==='2');
   assert.ok((await page.locator('#export-team').getAttribute('href')).includes('category=Mini+mascul'));
@@ -62,14 +62,14 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.reload();
   await page.selectOption('#category-select','Cadet');
   await page.waitForFunction(()=>document.querySelectorAll('#team-match optgroup').length===3);
-  for(const id of ['team-match','player-match']) {
+  for(const id of ['team-match']) {
     assert.deepEqual(await page.locator(`#${id} optgroup`).evaluateAll(groups=>groups.map(g=>[g.label,g.children.length])),
       [['Sin competición',2],['01/09/2026 - Liga escolar',3],['01/01/2027 - Liga escolar',2]]);
   }
   const groupedMatch=await page.locator('#team-match optgroup').nth(1).locator('option').nth(1).getAttribute('value');
   await page.locator('nav [data-view="team"]').click();
   await page.selectOption('#team-match',groupedMatch);
-  await page.waitForFunction(()=>document.querySelector('#player-match').value===document.querySelector('#team-match').value && document.querySelector('#player-kpis strong').textContent==='3');
+  await page.waitForFunction(()=>document.querySelector('#player-kpis strong').textContent==='3');
   assert.equal(await page.locator('#player-kpis strong').first().textContent(),'3');
   assert.equal(await page.locator('#match-scoreboard strong').textContent(),'2 – 4');
   assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['2','4']);
@@ -107,7 +107,6 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.selectOption('#player-select','ELN');
   await page.waitForFunction(()=>document.querySelector('#focus-name').textContent==='E.L.N.' && document.querySelector('#player-kpis strong').textContent==='2');
   assert.equal(await page.locator('#team-match').inputValue(),competition);
-  assert.equal(await page.locator('#player-match').inputValue(),competition);
   await page.selectOption('#team-match','');
   await page.waitForFunction(()=>document.querySelector('#team-kpis strong').textContent==='4');
   let home=fixture('Cadet',3,'','', '2026-11-01').toString().replaceAll(';CB BEGUES;MVP CERVELLÓ;',';MVP CERVELLÓ;CB BEGUES;');
@@ -125,6 +124,20 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.deepEqual(await page.locator('#players-table tbody tr td:last-child').allTextContents(),['2:30','3:00']);
   await page.locator('#players-table th').last().locator('button').click();
   assert.deepEqual(await page.locator('#players-table tbody tr td:last-child').allTextContents(),['3:00','2:30']);
+  assert.deepEqual(await page.locator('.context-selectors select').evaluateAll(items=>items.map(e=>e.id)),['player-select','category-select','team-match']);
+  const isolated=fixture('Junior',2,'Nueva liga','2026-09-01','2026-11-02').toString().replaceAll('M.N.L.','OTRO').replaceAll('E.L.N.','OTRO');
+  const isolatedImport=await fetch(base+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:'isolated.csv',data:Buffer.from(isolated).toString('base64')})});
+  assert.equal(isolatedImport.status,201);
+  await page.reload();
+  await page.waitForFunction(()=>document.querySelector('#player-select').options.length===3);
+  await page.selectOption('#player-select','OTRO');
+  await page.waitForFunction(()=>document.querySelector('#category-select').value==='Junior');
+  assert.deepEqual(await page.locator('#category-select option').allTextContents(),['Junior']);
+  assert.equal(await page.locator('#team-match optgroup').count(),1);
+  assert.equal(await page.locator('#team-match optgroup').getAttribute('label'),'01/09/2026 - Nueva liga');
+  await page.selectOption('#player-select','MNL');
+  await page.waitForFunction(()=>document.querySelector('#category-select').options.length===3);
+  assert.ok(!(await page.locator('#category-select option').allTextContents()).includes('Junior'));
   assert.deepEqual(errors,[]);
   console.log('OK: selectors, filters, export, import, competition totals and scoreboard');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
