@@ -16,8 +16,8 @@ function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
 let playerSort={column:2,direction:-1};
 function renderPlayers(){
- const headers=['Jugador','Dorsal','PTS','TL','T2','T3','Faltas'];
- const keys=['name','number','points','made1','made2','made3','fouls'];
+ const headers=['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Minutos desde P2'];
+ const keys=['name','number','points','made1','made2','made3','fouls','playing_seconds'];
  const {column,direction}=playerSort;
  const players=[...data.summary.players].sort((a,b)=>{
   const av=a[keys[column]],bv=b[keys[column]];
@@ -26,7 +26,7 @@ function renderPlayers(){
   if(!result&&column>=3&&column<=5)result=a['attempts'+(column-2)]-b['attempts'+(column-2)];
   return result*direction||a.name.localeCompare(b.name,'es',{sensitivity:'base'});
  });
- table($('players-table'),headers,players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls]),1);
+ table($('players-table'),headers,players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.playing_seconds==null?'—':`${Math.floor(p.playing_seconds/60)}:${String(p.playing_seconds%60).padStart(2,'0')}`]),1);
  $('players-table').querySelectorAll('th').forEach((th,i)=>{
   const active=i===column;
   th.setAttribute('scope','col');th.setAttribute('aria-sort',active?(direction===1?'ascending':'descending'):'none');
