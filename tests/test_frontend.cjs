@@ -72,7 +72,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.waitForFunction(()=>document.querySelector('#player-match').value===document.querySelector('#team-match').value && document.querySelector('#player-kpis strong').textContent==='3');
   assert.equal(await page.locator('#player-kpis strong').first().textContent(),'3');
   assert.equal(await page.locator('#match-scoreboard strong').textContent(),'2 – 4');
-  assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['4','2']);
+  assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['2','4']);
   assert.ok((await page.locator('#period-legend').textContent()).includes('CB BEGUES'));
   assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Puntos registrados'));
   assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Jugadores con acciones'));
@@ -80,9 +80,11 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.ok((await page.locator('#team-shooting').textContent()).includes('Tiros de 2'));
   assert.ok((await page.locator('#team-shooting').textContent()).includes('Triples'));
   assert.equal(await page.locator('#team-fouls strong').textContent(),'1 – 1');
+  assert.ok((await page.locator('#team-fouls p').first().textContent()).startsWith('CB BEGUES – MVP Cervelló'));
+  assert.deepEqual(await page.locator('#period-legend span').allTextContents(),['CB BEGUES','MVP Cervelló']);
   assert.equal(await page.locator('#team-fouls + .timeout-card').count(),1);
   assert.deepEqual(await page.locator('#players-table th button').allTextContents(),['Jugador ↕','Dorsal ↕','PTS ↓','TL ↕','T2 ↕','T3 ↕','Faltas ↕']);
-  assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['1','2']);
+  assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['2','1']);
   assert.ok(!(await page.locator('#players-table').textContent()).includes('EQUIPO'));
   await page.locator('#players-table th').nth(2).locator('button').click();
   assert.deepEqual(await page.locator('#players-table tbody tr td:nth-child(3)').allTextContents(),['1','3']);
@@ -108,6 +110,17 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.equal(await page.locator('#player-match').inputValue(),competition);
   await page.selectOption('#team-match','');
   await page.waitForFunction(()=>document.querySelector('#team-kpis strong').textContent==='4');
+  const home=fixture('Cadet',3,'','', '2026-11-01').toString().replaceAll(';CB BEGUES;MVP CERVELLÓ;',';MVP CERVELLÓ;CB BEGUES;');
+  const imported=await fetch(base+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:'home.csv',data:Buffer.from(home).toString('base64')})});
+  assert.equal(imported.status,201);
+  const homeMatch=(await imported.json()).match.id;
+  await page.reload();
+  await page.selectOption('#category-select','Cadet');
+  await page.selectOption('#team-match',homeMatch);
+  await page.waitForFunction(()=>document.querySelector('#match-scoreboard strong')?.textContent==='4 – 2');
+  assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['4','2']);
+  assert.deepEqual(await page.locator('#period-legend span').allTextContents(),['MVP Cervelló','CB BEGUES']);
+  assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['1','2']);
   assert.deepEqual(errors,[]);
   console.log('OK: selectors, filters, export, import, competition totals and scoreboard');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
