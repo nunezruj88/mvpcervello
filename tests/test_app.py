@@ -7,7 +7,7 @@ from pathlib import Path
 from openpyxl import Workbook
 import app
 from importer import parse, ImportError, REQUIRED
-from stats import summarize
+from stats import summarize, playing_seconds
 
 EXAMPLE = Path(__file__).resolve().parents[1] / 'examples' / 'partido_ficticio.csv'
 
@@ -85,6 +85,26 @@ class Tests(unittest.TestCase):
         self.assertEqual(period['period'],'P9')
         self.assertEqual(period['team_points'],0)
         self.assertEqual(period['opponent_points'],3)
+
+    def test_playing_time_excludes_p1_and_crosses_periods(self):
+        m=parse(EXAMPLE.name,self.data)
+        template=m['events'][2]
+        def event(period,clock,action):
+            return dict(template,team='MVP CERVELLÓ',player='M.N.L.',period=period,clock=clock,action=action,points=0)
+        m['events']=[event('P1','06:00','Entra al camp'),event('P1','00:00','Surt del camp'),
+                     event('P2','05:00','Entra al camp'),event('P2','03:00','Surt del camp'),
+                     event('P2','01:00','Entra al camp'),event('P3','04:00','Surt del camp')]
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),300)
+        self.assertEqual(playing_seconds([m,m],'MVP CERVELLÓ','MNL'),600)
+        self.assertEqual(summarize([m])['players'][0]['playing_seconds'],300)
+        m['events']=[event('P2','04:00','Surt del camp')]
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),120)
+        m['events']=[event('P2','04:00','Entra al camp')]
+        self.assertIsNone(playing_seconds([m],'MVP CERVELLÓ','MNL'))
+        m['events'].append(event('P2','','Final de període'))
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),240)
+        m['events']=[event('P2','04:00','Entra al camp'),event('P2','05:00','Surt del camp')]
+        self.assertIsNone(playing_seconds([m],'MVP CERVELLÓ','MNL'))
 
     def test_export_roundtrip_and_origin(self):
         self.call('/api/import','POST',self.payload())
