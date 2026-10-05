@@ -56,7 +56,7 @@ def application(env, start_response):
         if path == '/api/data' and method == 'GET':
             all_matches = matches()
             hierarchy = qs.get('hierarchy', [''])[0] == '1'
-            players = player_names(all_matches, TEAM) if hierarchy else TRACKED_PLAYERS
+            players = [p for p in player_names(all_matches, TEAM) if p['id'] in {'MNL', 'ELN'}] if hierarchy else TRACKED_PLAYERS
             player = player_key(qs.get('player', ['MNL'])[0])
             if player not in {p['id'] for p in players}:
                 player = players[0]['id'] if players else ''
