@@ -10,3 +10,5 @@
 .sort-column{border:0;background:transparent;color:inherit;font:inherit;font-weight:inherit;padding:6px 0;cursor:pointer;white-space:nowrap}.sort-column:hover{color:var(--ink)}.sort-column:focus-visible{outline:2px solid #87a9de;outline-offset:4px}
 
 .timeout-card .bar-row{grid-template-columns:minmax(0,1fr) 28px;gap:6px;margin:10px 0}.timeout-card .bar-label{grid-column:1 / -1;overflow-wrap:anywhere}.timeout-card .bar-row strong{font-size:18px;letter-spacing:0}.timeout-card .bar-label span{display:none}
+
+#team-kpis .label{font-weight:700;color:var(--ink)}
