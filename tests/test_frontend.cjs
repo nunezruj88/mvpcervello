@@ -13,10 +13,10 @@ const server = spawn(process.argv[2] || 'python', ['app.py'], {
 });
 let browser;
 const base = 'http://127.0.0.1:18092';
-function fixture(category, points) {
-  return Buffer.from('Fecha_partido;Local;Visitante;Periodo;Tiempo_restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_accion;Categoria_equipo\n' +
+function fixture(category, points, competition='', start='', matchDate='2026-10-03') {
+  return Buffer.from('Fecha_partido;Local;Visitante;Periodo;Tiempo_restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_accion;Categoria_equipo;Competicion;Fecha_competicion\n' +
     [['M.N.L.', points], ['E.L.N.', 1]].map(([name, score])=>
-      `2026-10-03;CB BEGUES;MVP CERVELLÓ;P1;05:00;MVP CERVELLÓ;12;${name};Cistella de ${score};${score};${category}\n`).join(''));
+      `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;05:00;MVP CERVELLÓ;12;${name};Cistella de ${score};${score};${category};${competition};${start}\n`).join(''));
 }
 (async()=>{
   for(let i=0;i<100;i++) {
@@ -51,8 +51,25 @@ function fixture(category, points) {
   assert.equal(await page.locator('#team-match').inputValue(),
     await page.locator('#team-match option').nth(1).getAttribute('value'));
   assert.equal(await page.locator('#player-select').inputValue(),'ELN');
+  for(const [start,matchDate] of [['01/09/2026','2026-10-04'],['2026-09-01','2026-10-05'],['01/01/2027','2027-01-02']]) {
+    const response=await fetch(base+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({filename:'league.csv',data:fixture('Cadet',3,'Liga escolar',start,matchDate).toString('base64')})});
+    assert.equal(response.status,201);
+  }
+  await page.reload();
+  await page.selectOption('#category-select','Cadet');
+  await page.waitForFunction(()=>document.querySelectorAll('#team-match optgroup').length===3);
+  for(const id of ['team-match','player-match']) {
+    assert.deepEqual(await page.locator(`#${id} optgroup`).evaluateAll(groups=>groups.map(g=>[g.label,g.children.length])),
+      [['Sin competición',1],['01/09/2026 - Liga escolar',2],['01/01/2027 - Liga escolar',1]]);
+  }
+  const groupedMatch=await page.locator('#team-match optgroup').nth(1).locator('option').first().getAttribute('value');
+  await page.locator('nav [data-view="team"]').click();
+  await page.selectOption('#team-match',groupedMatch);
+  await page.waitForFunction(()=>document.querySelector('#player-match').value===document.querySelector('#team-match').value && document.querySelector('#player-kpis strong').textContent==='3');
+  assert.equal(await page.locator('#player-kpis strong').first().textContent(),'3');
   assert.deepEqual(errors,[]);
-  console.log('OK: selectors, category/player filtering, export and import refresh');
+  console.log('OK: selectors, filters, export, import refresh and competition groups');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
   if(browser)await browser.close();
   server.kill();
