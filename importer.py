@@ -76,6 +76,28 @@ def integer(v, field, line, blank=False):
 
 def parse(name, data, complete=False):
     rows = read_rows(name, data)
+    competitions, competition_dates = {}, set()
+    for r in rows:
+        competition = text(r.get('Competicion'))
+        if competition:
+            competitions.setdefault(norm(competition), competition)
+        start = r.get('Fecha_competicion')
+        if text(start):
+            try:
+                if isinstance(start, (date, datetime)):
+                    start = start.strftime('%Y-%m-%d')
+                else:
+                    start = text(start)
+                    start = datetime.strptime(start, '%d/%m/%Y').strftime('%Y-%m-%d') if '/' in start else date.fromisoformat(start).isoformat()
+            except ValueError:
+                raise ImportError(f"Fila {r['_line']}: Fecha_competicion inválida; usa AAAA-MM-DD o DD/MM/AAAA.")
+            competition_dates.add(start)
+    if len(competitions) > 1 or len(competition_dates) > 1:
+        raise ImportError('Cada archivo debe indicar una sola competición y fecha de inicio.')
+    if bool(competitions) != bool(competition_dates):
+        raise ImportError('Indica Competicion y Fecha_competicion juntas, o deja ambas vacías.')
+    competition = next(iter(competitions.values()), '')
+    competition_date = next(iter(competition_dates), '')
     events, identities = [], set()
     unknown = set()
     for r in rows:
@@ -130,5 +152,7 @@ def parse(name, data, complete=False):
     duplicates = len(events) - len({(e['period'],e['clock'],norm(e['team']),e['number'],norm(e['action'])) for e in events})
     if duplicates: warnings.append(f'{duplicates} acciones coinciden en período, tiempo, jugador y tipo. Revisar: se han conservado.')
     display_category = next((e['category'] for e in events if is_team(e['team'])), '')
-    return dict(id=key, legacy_id=legacy_id, category=display_category, date=dt, home=text(rows[0]['Local']), away=text(rows[0]['Visitante']), complete=bool(complete),
+    return dict(id=key, legacy_id=legacy_id, category=display_category,
+                competition=competition, competition_date=competition_date,
+                date=dt, home=text(rows[0]['Local']), away=text(rows[0]['Visitante']), complete=bool(complete),
                 filename=name, events=events, warnings=warnings, source_hash=hashlib.sha256(data).hexdigest())

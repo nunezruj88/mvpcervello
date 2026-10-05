@@ -110,3 +110,9 @@ systemctl start mvp-cervello
 ```
 
 Para pruebas locales: Python 3.10+, instalar `openpyxl` y ejecutar `python app.py`. Escucha solo en `127.0.0.1:8092`. Pruebas de importación, persistencia y cálculos: `python -m unittest discover -s tests -v`. Gunicorn se utiliza en Linux, no en Windows.
+
+## Competición en el fichero
+
+Las columnas opcionales `Competicion` y `Fecha_competicion` identifican la competición y su fecha de inicio. Usa ambas juntas, con fecha AAAA-MM-DD o DD/MM/AAAA (también una fecha de Excel). Basta indicarlas en una fila; los valores no vacíos deben coincidir en todo el partido. Se conservan al guardar y exportar. No cambian la identidad del partido: reimportar el fichero actualizado requiere confirmar el reemplazo.
+
+Los selectores de partido del equipo y del jugador agrupan los partidos bajo «DD/MM/AAAA - Competición», ordenados por fecha de inicio. Dos ediciones con el mismo nombre y fechas distintas forman grupos separados. Los partidos antiguos o sin esos datos aparecen en «Sin competición»; reimpórtalos para asignarles una competición.
