@@ -39,7 +39,7 @@ def player_names(matches, team):
     names = {}
     for m in team_matches(matches, team):
         for e in m['events']:
-            if norm(e['team']) == norm(team) and e['player']:
+            if norm(e['team']) == norm(team) and e['player'] and player_key(e['player']) != 'EQUIPO':
                 names.setdefault(player_key(e['player']), e['player'])
     return [dict(id=k, name=v) for k, v in sorted(names.items(), key=lambda item: norm(item[1]))]
 
@@ -69,10 +69,11 @@ def category_matches(matches, category):
 
 def event_stats(events):
     result = dict(points=0, fouls=0, made1=0, missed1=0, made2=0, missed2=0,
-                  made3=0, missed3=0, rebounds=0, assists=0, steals=0, turnovers=0, blocks=0, events=0)
+                  made3=0, missed3=0, rebounds=0, assists=0, steals=0, turnovers=0, blocks=0, timeouts=0, events=0)
     for e in events:
         a = norm(e['action'])
         result['events'] += 1
+        if a == 'TEMPS MORT': result['timeouts'] += 1
         result['points'] += e['points']
         for n in (1, 2, 3):
             if a == f'CISTELLA DE {n}': result[f'made{n}'] += 1
@@ -94,7 +95,7 @@ def summarize(matches, team=TEAM, player='MNL'):
               for m in matches for e in m['events'] if norm(e['team']) == norm(team)]
     players = defaultdict(list)
     for e in events:
-        if e['player']:
+        if e['player'] and player_key(e['player']) != 'EQUIPO':
             players[player_key(e['player'])].append(e)
     ranking = []
     for key, es in players.items():
@@ -120,5 +121,5 @@ def summarize(matches, team=TEAM, player='MNL'):
         periods.append(dict(period=p, team_points=sum(e['points'] for e in es),
                             opponent_points=sum(e['points'] for e in opponent_events if e['period'] == p),
                             focus_points=sum(e['points'] for e in fs)))
-    return dict(team=event_stats(events), players=ranking, focus=event_stats(focus), focus_events=focus,
+    return dict(team=event_stats(events), opponent=event_stats(opponent_events), players=ranking, focus=event_stats(focus), focus_events=focus,
                 periods=periods, trend=trend, matches=len(matches), partial=sum(not m['complete'] for m in matches))
