@@ -67,3 +67,36 @@ class CompetitionTests(unittest.TestCase):
             row[-1] = ''
         with self.assertRaisesRegex(ImportError, 'juntas'):
             parse('missing.csv', self.encode(rows))
+
+    def test_competition_totals_export_and_scoreboard(self):
+        from urllib.parse import urlencode
+        from stats import norm
+        stored = []
+        original = self.data
+        for match_date, start in [('2026-10-03', '2026-09-01'), ('2026-10-04', '2026-09-01'), ('2027-01-02', '2027-01-01')]:
+            self.data = original
+            rows = self.rows()
+            for row in rows[1:]:
+                row[1], row[-1] = match_date, start
+            self.data = self.encode(rows)
+            saved = self.call('/api/import', 'POST', self.payload())
+            self.assertEqual(saved['status'], '201 Created')
+            stored.append(parse('test.csv', self.data))
+        query = dict(competition='LIGA ESCOLAR', competition_date='2026-09-01')
+        result = self.call('/api/data', query=urlencode(query))['json']
+        self.assertEqual(result['summary']['matches'], 2)
+        self.assertEqual(result['summary']['team']['points'], 12)
+        self.assertEqual(result['summary']['focus']['points'], 4)
+        self.assertIsNone(result['scoreboard'])
+        self.assertEqual(len(result['matches']), 3)
+        exported = self.call('/api/export', query=urlencode(query))['body']
+        rows = list(csv.DictReader(io.StringIO(exported.decode('utf-8-sig')), delimiter=';'))
+        self.assertEqual({r['Fecha_partido'] for r in rows}, {'2026-10-03', '2026-10-04'})
+        result = self.call('/api/data', query=urlencode(dict(query, match=stored[0]['id'])))['json']
+        score = result['scoreboard']
+        self.assertEqual(score['home_points'], sum(e['points'] for e in stored[0]['events'] if norm(e['team']) == norm(stored[0]['home'])))
+        self.assertEqual(score['away_points'], 6)
+        self.assertFalse(score['complete'])
+        result = self.call('/api/data', query=urlencode(dict(query, match=stored[2]['id'])))['json']
+        self.assertEqual(result['summary']['matches'], 0)
+        self.assertIsNone(result['scoreboard'])

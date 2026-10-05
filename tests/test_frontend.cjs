@@ -49,7 +49,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.click('#save');
   await page.waitForFunction(()=>document.querySelector('#category-select').value==='Cadet');
   assert.equal(await page.locator('#team-match').inputValue(),
-    await page.locator('#team-match option').nth(1).getAttribute('value'));
+    await page.locator('#team-match option').nth(2).getAttribute('value'));
   assert.equal(await page.locator('#player-select').inputValue(),'ELN');
   for(const [start,matchDate] of [['01/09/2026','2026-10-04'],['2026-09-01','2026-10-05'],['01/01/2027','2027-01-02']]) {
     const response=await fetch(base+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -61,15 +61,30 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.waitForFunction(()=>document.querySelectorAll('#team-match optgroup').length===3);
   for(const id of ['team-match','player-match']) {
     assert.deepEqual(await page.locator(`#${id} optgroup`).evaluateAll(groups=>groups.map(g=>[g.label,g.children.length])),
-      [['Sin competición',1],['01/09/2026 - Liga escolar',2],['01/01/2027 - Liga escolar',1]]);
+      [['Sin competición',2],['01/09/2026 - Liga escolar',3],['01/01/2027 - Liga escolar',2]]);
   }
-  const groupedMatch=await page.locator('#team-match optgroup').nth(1).locator('option').first().getAttribute('value');
+  const groupedMatch=await page.locator('#team-match optgroup').nth(1).locator('option').nth(1).getAttribute('value');
   await page.locator('nav [data-view="team"]').click();
   await page.selectOption('#team-match',groupedMatch);
   await page.waitForFunction(()=>document.querySelector('#player-match').value===document.querySelector('#team-match').value && document.querySelector('#player-kpis strong').textContent==='3');
   assert.equal(await page.locator('#player-kpis strong').first().textContent(),'3');
+  assert.equal(await page.locator('#match-scoreboard strong').textContent(),'0 – 4');
+  assert.ok((await page.locator('#match-scoreboard').textContent()).includes('Marcador parcial'));
+  assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
+  const competition=await page.locator('#team-match optgroup').nth(1).locator('option').first().getAttribute('value');
+  await page.selectOption('#team-match',competition);
+  await page.waitForFunction(()=>document.querySelector('#player-kpis strong').textContent==='6');
+  assert.equal(await page.locator('#match-scoreboard').count(),0);
+  assert.ok((await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
+  assert.ok((await page.locator('#export-team').getAttribute('href')).includes('competition_date=2026-09-01'));
+  await page.selectOption('#player-select','ELN');
+  await page.waitForFunction(()=>document.querySelector('#focus-name').textContent==='E.L.N.' && document.querySelector('#player-kpis strong').textContent==='2');
+  assert.equal(await page.locator('#team-match').inputValue(),competition);
+  assert.equal(await page.locator('#player-match').inputValue(),competition);
+  await page.selectOption('#team-match','');
+  await page.waitForFunction(()=>document.querySelector('#team-kpis strong').textContent==='4');
   assert.deepEqual(errors,[]);
-  console.log('OK: selectors, filters, export, import refresh and competition groups');
+  console.log('OK: selectors, filters, export, import, competition totals and scoreboard');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
   if(browser)await browser.close();
   server.kill();
