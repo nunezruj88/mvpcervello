@@ -14,6 +14,12 @@ function badge(complete){return el('span',complete?'Completo':'Parcial',complete
 function coverage(id,s){const e=$(id);e.classList.toggle('complete',s.matches>0&&!s.partial);e.textContent=!s.matches?'Sin partidos importados.':s.partial?`${s.partial} ${s.partial===1?'partido parcial':'partidos parciales'} en la selección. Las cifras corresponden únicamente a las acciones subidas.`:`${s.matches} ${s.matches===1?'partido marcado':'partidos marcados'} como completo${s.matches===1?'':'s'}. Estadísticas según las acciones registradas.`;}
 function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-row'+(focus?' focus':'')),name=el('div',label,'bar-label');name.append(el('span',sub));const track=el('div',undefined,'bar-track'),fill=el('div',undefined,'bar-fill');fill.style.width=(max?value/max*100:0)+'%';track.append(fill);row.append(name,track,el('strong',fmt(value)));return row;}
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
+function selectionQuery(){
+ const query=new URLSearchParams();if(category!==null)query.set('category',category);
+ if(selected.startsWith('competition:')){const [start,name]=JSON.parse(selected.slice(12));query.set('competition',name);query.set('competition_date',start);}
+ else if(selected)query.set('match',selected);
+ return query;
+}
 function matchOptions(matches){
  const groups=new Map();
  for(const m of matches){
@@ -24,6 +30,7 @@ function matchOptions(matches){
  }
  return [...groups.values()].sort((a,b)=>a.start.localeCompare(b.start)||a.name.localeCompare(b.name,'es')).map(g=>{
   const group=el('optgroup');group.label=g.name?`${g.start?date(g.start):'Sin fecha'} - ${g.name}`:'Sin competición';
+  group.append(new Option(g.name?`Toda la competición · ${group.label}`:'Todos los partidos sin competición','competition:'+JSON.stringify([g.start,g.name])));
   group.append(...g.matches.map(m=>new Option(`${date(m.date)} · ${m.home} – ${m.away}${m.complete?'':' (parcial)'}`,m.id)));
   return group;
  });
@@ -44,15 +51,18 @@ function render(){const s=data.summary;
  $('focus-number').textContent=stats?.number??'—';$('focus-actions-title').textContent='Acciones de '+focus.name;
  for(const id of ['team-match','player-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...matchOptions(data.matches));select.value=selected;}
  coverage('team-coverage',s);$('team-empty').hidden=!!s.matches;$('team-content').hidden=!s.matches;
- kpis('team-kpis',[['Partidos importados',s.matches,`${s.partial} con grabación parcial`],['Puntos registrados',s.team.points,'MVP Cervelló'],['Jugadores con acciones',s.players.length,'En los archivos seleccionados'],['Faltas personales',s.team.fouls,'Registradas para el equipo']]);
+ const items=[['Puntos registrados',s.team.points,'MVP Cervelló'],['Jugadores con acciones',s.players.length,'En los archivos seleccionados'],['Faltas personales',s.team.fouls,'Registradas para el equipo']];
+ if(!data.scoreboard)items.unshift(['Partidos importados',s.matches,`${s.partial} con grabación parcial`]);
+ kpis('team-kpis',items);
+ if(data.scoreboard){const score=data.scoreboard, card=el('div',undefined,'kpi');card.id='match-scoreboard';card.append(el('span',score.complete?'Marcador':'Marcador parcial','label'),el('strong',`${fmt(score.home_points)} – ${fmt(score.away_points)}`),el('p',`${score.home} – ${score.away}`),el('p','Puntos de las acciones importadas'));$('team-kpis').prepend(card);}
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
  const pmax=Math.max(1,...s.periods.map(p=>p.team_points));$('periods').replaceChildren(...s.periods.map(p=>{const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar');b.style.height=(p.team_points/pmax*150)+'px';c.append(el('strong',fmt(p.team_points)),b,el('span',p.period));return c;}));
  table($('players-table'),['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Acciones'],s.players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.events]),1);
- const exportQuery=new URLSearchParams({category:category??''});if(selected)exportQuery.set('match',selected);$('export-team').href='/api/export?'+exportQuery;
+ $('export-team').href='/api/export?'+selectionQuery();
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
  renderFocus();
 }
-async function refresh(){try{const query=new URLSearchParams({player});if(category!==null)query.set('category',category);if(selected)query.set('match',selected);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;render();}catch(e){notice(e.message,true);}}
+async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;render();}catch(e){notice(e.message,true);}}
 $('category-select').addEventListener('change',async e=>{category=e.target.value;selected='';await refresh();});
 $('player-select').addEventListener('change',async e=>{player=e.target.value;await refresh();});
 for(const id of ['team-match','player-match'])$(id).addEventListener('change',async e=>{selected=e.target.value;await refresh();});
