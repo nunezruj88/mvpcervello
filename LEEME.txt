@@ -1,0 +1,1 @@
+Sustituye importer.py y static/app.js en la carpeta instalada de MVP Cervello. Reinicia el servicio mvp-cervello y recarga la pagina. Esta correccion admite tiempos muertos sin jugador y desplaza la pagina hasta los errores. No modifica la base de datos.

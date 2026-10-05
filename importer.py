@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 from stats import norm, is_team
 
 HEADERS = ['Orden', 'Fecha_partido', 'Local', 'Visitante', 'Periodo', 'Tiempo_restante', 'Equipo',
-           'Dorsal', 'Jugador', 'Accion_original', 'Puntos_Begues_periodo', 'Puntos_Cervello_periodo', 'Puntos_accion', 'Observaciones', 'Categoria_equipo']
+           'Dorsal', 'Jugador', 'Accion_original', 'Puntos_Begues_periodo', 'Puntos_Cervello_periodo', 'Puntos_accion', 'Observaciones']
 REQUIRED = ['Fecha_partido','Local','Visitante','Periodo','Tiempo_restante','Equipo','Dorsal','Jugador','Accion_original','Puntos_accion']
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -48,8 +48,7 @@ def read_rows(name, data):
     else: raise ImportError('Selecciona un archivo .xlsx o .csv.')
     if not values: raise ImportError('El archivo está vacío.')
     headers = [str(v or '').strip() for v in values[0]]
-    repeated = sorted({h for h in headers if headers.count(h) > 1})
-    if repeated: raise ImportError('Hay cabeceras repetidas: ' + ', '.join(repeated) + '. Usa Equipo para el club y Categoria_equipo para la categoría.')
+    if len(set(headers)) != len(headers): raise ImportError('Hay cabeceras repetidas.')
     missing = [h for h in REQUIRED if h not in headers]
     if missing: raise ImportError('Faltan columnas: ' + ', '.join(missing))
     result = []
@@ -87,6 +86,7 @@ def parse(name, data, complete=False):
         except ValueError: raise ImportError(f'Fila {line}: fecha inválida; usa AAAA-MM-DD o DD/MM/AAAA.')
         home, away = text(r['Local']), text(r['Visitante'])
         if not home or not away or norm(home) == norm(away): raise ImportError(f'Fila {line}: equipos inválidos.')
+        if not (is_team(home) or is_team(away)): raise ImportError('El partido debe incluir a MVP Cervelló.')
         identities.add((dt, norm(home), norm(away)))
         p = norm(r['Periodo'])
         if not re.fullmatch(r'P(?:[1-9]|[1-9][0-9])', p): raise ImportError(f'Fila {line}: período inválido, usa P1, P2…')
@@ -97,27 +97,22 @@ def parse(name, data, complete=False):
         team, player, action = text(r['Equipo']), text(r['Jugador']), text(r['Accion_original'])
         if not action: raise ImportError(f'Fila {line}: falta la acción.')
         if team and norm(team) not in (norm(home), norm(away)): raise ImportError(f'Fila {line}: equipo de la acción desconocido.')
-        if team and (not player or not clock): raise ImportError(f'Fila {line}: falta jugador o tiempo de la acción.')
+        team_action = norm(action) == 'TEMPS MORT'
+        if team and (not clock or (not player and not team_action)):
+            raise ImportError(f'Fila {line}: falta jugador o tiempo de la acción.')
         number = integer(r['Dorsal'], 'Dorsal', line, True)
         points = integer(r['Puntos_accion'], 'Puntos_accion', line, True)
         points = 0 if points is None else points
         expected = re.fullmatch(r'CISTELLA DE ([123])', norm(action))
         if points > 3 or (expected and points != int(expected[1])) or (not expected and points):
             raise ImportError(f'Fila {line}: puntos incompatibles con la acción.')
-        if not norm(action).startswith(('CISTELLA','INTENT FALLAT','PERSONAL','FALTA','SALT','FINAL','SURT','ENTRA','REBOT','ASSISTENCIA','RECUPERACIO','PERDUA','TAP')):
+        if not norm(action).startswith(('CISTELLA','INTENT FALLAT','PERSONAL','FALTA','SALT','FINAL','SURT','ENTRA','REBOT','ASSISTENCIA','RECUPERACIO','PERDUA','TAP','TEMPS MORT')):
             unknown.add(action)
         events.append(dict(order=len(events)+1, period=p, clock=clock, team=team, number=number, player=player,
-                           action=action, points=points, notes=text(r.get('Observaciones')),
-                           category=text(r.get('Categoria_equipo'))))
+                           action=action, points=points, notes=text(r.get('Observaciones'))))
     if len(identities) != 1: raise ImportError('Cada archivo debe contener un solo partido.')
     dt, h, a = next(iter(identities))
-    categories = {norm(e.get('category', '')) for e in events if is_team(e['team']) and e.get('category')}
-    if len(categories) > 1:
-        raise ImportError('Cada archivo debe contener una sola categoría del MVP Cervelló.')
-    category_key = next(iter(categories), '')
-    identity = f'{dt}|{h}|{a}' + (f'|{category_key}' if category_key else '')
-    key = hashlib.sha256(identity.encode()).hexdigest()[:24]
-    legacy_id = hashlib.sha256(f'{dt}|{h}|{a}'.encode()).hexdigest()[:24]
+    key = hashlib.sha256(f'{dt}|{h}|{a}'.encode()).hexdigest()[:24]
     warnings = ['El marcador de cada tarjeta corresponde al período, no al acumulado del partido.']
     if not complete: warnings.append('Importación parcial: las estadísticas solo representan las acciones subidas.')
     if unknown: warnings.append('Acciones conservadas sin clasificación estadística: ' + ', '.join(sorted(unknown)))
@@ -125,4 +120,4 @@ def parse(name, data, complete=False):
     duplicates = len(events) - len({(e['period'],e['clock'],norm(e['team']),e['number'],norm(e['action'])) for e in events})
     if duplicates: warnings.append(f'{duplicates} acciones coinciden en período, tiempo, jugador y tipo. Revisar: se han conservado.')
     return dict(id=key, date=dt, home=text(rows[0]['Local']), away=text(rows[0]['Visitante']), complete=bool(complete),
-                filename=name, legacy_id=legacy_id, events=events, warnings=warnings, source_hash=hashlib.sha256(data).hexdigest())
+                filename=name, events=events, warnings=warnings, source_hash=hashlib.sha256(data).hexdigest())
