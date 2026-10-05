@@ -112,9 +112,13 @@ def summarize(matches, team=TEAM, player='MNL'):
                           complete=m['complete'], team_points=sum(e['points'] for e in es),
                           focus_points=sum(e['points'] for e in fs)))
     periods = []
-    for p in sorted({e['period'] for e in events}, key=lambda v: int(v[1:])):
+    opponent_events = [e for m in matches for e in m['events']
+                       if norm(e['team']) == norm(m['away'] if norm(m['home']) == norm(team) else m['home'])]
+    for p in sorted({e['period'] for e in events + opponent_events}, key=lambda v: int(v[1:])):
         es = [e for e in events if e['period'] == p]
         fs = [e for e in focus if e['period'] == p]
-        periods.append(dict(period=p, team_points=sum(e['points'] for e in es), focus_points=sum(e['points'] for e in fs)))
+        periods.append(dict(period=p, team_points=sum(e['points'] for e in es),
+                            opponent_points=sum(e['points'] for e in opponent_events if e['period'] == p),
+                            focus_points=sum(e['points'] for e in fs)))
     return dict(team=event_stats(events), players=ranking, focus=event_stats(focus), focus_events=focus,
                 periods=periods, trend=trend, matches=len(matches), partial=sum(not m['complete'] for m in matches))
