@@ -80,6 +80,8 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.ok((await page.locator('#team-shooting').textContent()).includes('Tiros de 2'));
   assert.ok((await page.locator('#team-shooting').textContent()).includes('Triples'));
   assert.equal(await page.locator('#team-fouls strong').textContent(),'1 – 1');
+  assert.equal(await page.locator('#team-fouls + .timeout-card').count(),1);
+  assert.deepEqual(await page.locator('#players-table th button').allTextContents(),['Jugador ↕','Dorsal ↕','PTS ↓','TL ↕','T2 ↕','T3 ↕','Faltas ↕']);
   assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['1','2']);
   assert.ok(!(await page.locator('#players-table').textContent()).includes('EQUIPO'));
   await page.locator('#players-table th').nth(2).locator('button').click();
@@ -89,7 +91,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.deepEqual(await page.locator('#players-table tbody tr td:nth-child(3)').allTextContents(),['3','1']);
   await page.locator('#players-table th').first().locator('button').click();
   assert.deepEqual(await page.locator('#players-table tbody tr td:first-child').allTextContents(),['E.L.N.','M.N.L.']);
-  for(let i=1;i<8;i++)await page.locator('#players-table th').nth(i).locator('button').click();
+  for(let i=1;i<7;i++)await page.locator('#players-table th').nth(i).locator('button').click();
   assert.ok((await page.locator('#match-scoreboard').textContent()).includes('Marcador parcial'));
   assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
   const competition=await page.locator('#team-match optgroup').nth(1).locator('option').first().getAttribute('value');
