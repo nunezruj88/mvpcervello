@@ -82,14 +82,18 @@ function render(){const s=data.summary;
  shots.append(el('p','Aciertos / intentos registrados'));$('team-kpis').append(shots);
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
  const rival=data.scoreboard?(s.trend[0]?.opponent||'Rival'):'Rivales';
- const fouls=el('div',undefined,'kpi');fouls.id='team-fouls';fouls.append(el('span','Faltas personales','label'),el('strong',`${fmt(s.team.fouls)} – ${fmt(s.opponent.fouls)}`),el('p',`MVP Cervelló – ${rival}`),el('p','Faltas de las acciones importadas'));$('team-kpis').append(fouls);
+ const normalizeTeam=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+ const ownFirst=!data.scoreboard||normalizeTeam(data.scoreboard.home)===normalizeTeam(data.selected_team);
+ const teams=[{name:'MVP Cervelló',stats:s.team,own:true},{name:rival,stats:s.opponent,own:false}];
+ if(!ownFirst)teams.reverse();
+ const fouls=el('div',undefined,'kpi');fouls.id='team-fouls';fouls.append(el('span','Faltas personales','label'),el('strong',teams.map(t=>fmt(t.stats.fouls)).join(' – ')),el('p',teams.map(t=>t.name).join(' – ')),el('p','Faltas de las acciones importadas'));$('team-kpis').append(fouls);
  const timeoutCard=el('div',undefined,'kpi timeout-card');timeoutCard.append(el('span','Tiempos muertos solicitados','label'));const timeoutChart=el('div');timeoutChart.id='timeouts';timeoutCard.append(timeoutChart);$('team-kpis').append(timeoutCard);
  const timeoutMax=Math.max(1,s.team.timeouts,s.opponent.timeouts);
- $('timeouts').replaceChildren(bar('MVP Cervelló','Tiempos muertos registrados',s.team.timeouts,timeoutMax),bar(rival,'Tiempos muertos registrados',s.opponent.timeouts,timeoutMax));
- $('period-legend').replaceChildren(el('span','MVP Cervelló','legend-team'),el('span',rival,'legend-opponent'));
+ $('timeouts').replaceChildren(...teams.map(t=>bar(t.name,'Tiempos muertos registrados',t.stats.timeouts,timeoutMax)));
+ $('period-legend').replaceChildren(...teams.map(t=>el('span',t.name,t.own?'legend-team':'legend-opponent')));
  const pmax=Math.max(1,...s.periods.flatMap(p=>[p.team_points,p.opponent_points||0]));
  $('periods').replaceChildren(...s.periods.map(p=>{const group=el('div',undefined,'period-group'),bars=el('div',undefined,'period-bars');
-  for(const [points,name,cls] of [[p.team_points,'MVP Cervelló',''],[p.opponent_points||0,rival,'opponent']]){const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar '+cls);b.style.height=(points/pmax*150)+'px';c.title=`${p.period} · ${name}: ${points} puntos registrados`;c.append(el('strong',fmt(points)),b);bars.append(c);}
+  for(const [points,name,cls] of teams.map(t=>[t.own?p.team_points:(p.opponent_points||0),t.name,t.own?'':'opponent'])){const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar '+cls);b.style.height=(points/pmax*150)+'px';c.title=`${p.period} · ${name}: ${points} puntos registrados`;c.append(el('strong',fmt(points)),b);bars.append(c);}
   group.append(bars,el('span',p.period));return group;
  }));
  renderPlayers();
