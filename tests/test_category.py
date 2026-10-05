@@ -70,3 +70,14 @@ class CategoryTests(unittest.TestCase):
         rows[0][-1] = 'Equipo'
         with self.assertRaisesRegex(ImportError, 'Equipo.*Categoria_equipo'):
             parse('duplicate.csv', self.csv_bytes(rows))
+
+    def test_reject_mixed_own_categories(self):
+        rows = self.with_category()
+        own = [r for r in rows[1:] if r[6] == 'MVP CERVELLÓ']
+        self.assertGreater(len(own), 1)
+        own[0][-1] = 'Infantil'
+        with self.assertRaisesRegex(ImportError, 'una sola categoría'):
+            parse('mixed.csv', self.csv_bytes(rows))
+        own[0][-1] = ''
+        with self.assertRaisesRegex(ImportError, 'una sola categoría'):
+            parse('missing.csv', self.csv_bytes(rows))
