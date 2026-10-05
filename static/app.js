@@ -73,7 +73,7 @@ function render(){const s=data.summary;
  $('focus-number').textContent=stats?.number??'—';$('focus-actions-title').textContent='Acciones de '+focus.name;
  for(const id of ['team-match','player-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...matchOptions(data.matches));select.value=selected;}
  coverage('team-coverage',s);$('team-empty').hidden=!!s.matches;$('team-content').hidden=!s.matches;
- const items=[['Faltas personales',s.team.fouls,'Registradas para el equipo']];
+ const items=[];
  if(!data.scoreboard)items.unshift(['Partidos importados',s.matches,`${s.partial} con grabación parcial`]);
  kpis('team-kpis',items);
  if(data.scoreboard){const score=data.scoreboard, card=el('div',undefined,'kpi');card.id='match-scoreboard';card.append(el('span',score.complete?'Marcador':'Marcador parcial','label'),el('strong',`${fmt(score.home_points)} – ${fmt(score.away_points)}`),el('p',`${score.home} – ${score.away}`),el('p','Puntos de las acciones importadas'));$('team-kpis').prepend(card);}
@@ -82,6 +82,9 @@ function render(){const s=data.summary;
  shots.append(el('p','Aciertos / intentos registrados'));$('team-kpis').append(shots);
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
  const rival=data.scoreboard?(s.trend[0]?.opponent||'Rival'):'Rivales';
+ const fouls=el('div',undefined,'kpi');fouls.id='team-fouls';fouls.append(el('span','Faltas personales','label'),el('strong',`${fmt(s.team.fouls)} – ${fmt(s.opponent.fouls)}`),el('p',`MVP Cervelló – ${rival}`),el('p','Faltas de las acciones importadas'));$('team-kpis').append(fouls);
+ const timeoutMax=Math.max(1,s.team.timeouts,s.opponent.timeouts);
+ $('timeouts').replaceChildren(bar('MVP Cervelló','Tiempos muertos registrados',s.team.timeouts,timeoutMax),bar(rival,'Tiempos muertos registrados',s.opponent.timeouts,timeoutMax));
  $('period-legend').replaceChildren(el('span','MVP Cervelló','legend-team'),el('span',rival,'legend-opponent'));
  const pmax=Math.max(1,...s.periods.flatMap(p=>[p.team_points,p.opponent_points||0]));
  $('periods').replaceChildren(...s.periods.map(p=>{const group=el('div',undefined,'period-group'),bars=el('div',undefined,'period-bars');
