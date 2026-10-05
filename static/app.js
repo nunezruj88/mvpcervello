@@ -51,10 +51,13 @@ function render(){const s=data.summary;
  $('focus-number').textContent=stats?.number??'—';$('focus-actions-title').textContent='Acciones de '+focus.name;
  for(const id of ['team-match','player-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...matchOptions(data.matches));select.value=selected;}
  coverage('team-coverage',s);$('team-empty').hidden=!!s.matches;$('team-content').hidden=!s.matches;
- const items=[['Puntos registrados',s.team.points,'MVP Cervelló'],['Jugadores con acciones',s.players.length,'En los archivos seleccionados'],['Faltas personales',s.team.fouls,'Registradas para el equipo']];
+ const items=[['Faltas personales',s.team.fouls,'Registradas para el equipo']];
  if(!data.scoreboard)items.unshift(['Partidos importados',s.matches,`${s.partial} con grabación parcial`]);
  kpis('team-kpis',items);
  if(data.scoreboard){const score=data.scoreboard, card=el('div',undefined,'kpi');card.id='match-scoreboard';card.append(el('span',score.complete?'Marcador':'Marcador parcial','label'),el('strong',`${fmt(score.home_points)} – ${fmt(score.away_points)}`),el('p',`${score.home} – ${score.away}`),el('p','Puntos de las acciones importadas'));$('team-kpis').prepend(card);}
+ const shots=el('div',undefined,'kpi');shots.id='team-shooting';shots.append(el('span','Tiros registrados','label'));
+ for(const [n,label] of [[1,'Tiros libres'],[2,'Tiros de 2'],[3,'Triples']]){const row=el('p',label+': ');row.append(el('b',`${s.team['made'+n]}/${s.team['attempts'+n]}`));shots.append(row);}
+ shots.append(el('p','Aciertos / intentos registrados'));$('team-kpis').append(shots);
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
  const pmax=Math.max(1,...s.periods.map(p=>p.team_points));$('periods').replaceChildren(...s.periods.map(p=>{const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar');b.style.height=(p.team_points/pmax*150)+'px';c.append(el('strong',fmt(p.team_points)),b,el('span',p.period));return c;}));
  table($('players-table'),['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Acciones'],s.players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.events]),1);
