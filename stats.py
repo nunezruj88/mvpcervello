@@ -89,6 +89,58 @@ def event_stats(events):
         result[f'percent{n}'] = round(100 * result[f'made{n}'] / attempted, 1) if attempted else None
     return result
 
+def playing_seconds(matches, team, player):
+    """Recorded court time from P2; six-minute periods, no P1 inference."""
+    total = 0
+    relevant = [m for m in matches if any(norm(e['team']) == norm(team)
+                and player_key(e['player']) == player for e in m['events'])]
+    for match in relevant:
+        periods = sorted({int(e['period'][1:]) for e in match['events'] if int(e['period'][1:]) >= 2})
+        if not periods or periods != list(range(2, periods[-1] + 1)):
+            return None
+        on_court = None
+        for period in periods:
+            all_events = [e for e in match['events'] if e['period'] == f'P{period}']
+            changes = [e for e in all_events if norm(e['team']) == norm(team)
+                       and player_key(e['player']) == player
+                       and norm(e['action']).startswith(('ENTRA', 'SURT'))]
+            start = 360 if on_court else None
+            previous = 360
+            for e in changes:
+                if not e['clock']:
+                    return None
+                minutes, seconds = map(int, e['clock'].split(':'))
+                clock = minutes * 60 + seconds
+                if clock > previous or clock > 360:
+                    return None
+                previous = clock
+                entering = norm(e['action']).startswith('ENTRA')
+                if on_court is None:
+                    # The first exit identifies a starter in this period.
+                    on_court = not entering
+                    start = 360 if on_court else None
+                if entering:
+                    if on_court and clock != 360:
+                        return None
+                    if not on_court:
+                        start = clock
+                    on_court = True
+                else:
+                    if not on_court:
+                        return None
+                    total += start - clock
+                    on_court, start = False, None
+            if on_court is None:
+                return None
+            if on_court:
+                ended = period < periods[-1] or match['complete'] or any(
+                    norm(e['action']).startswith('FINAL') for e in all_events)
+                if not ended:
+                    return None
+                total += start
+    return total if relevant else None
+
+
 def summarize(matches, team=TEAM, player='MNL'):
     matches = team_matches(matches, team)
     events = [dict(e, match_id=m['id'], date=m['date'], opponent=m['away'] if norm(m['home']) == norm(team) else m['home'])
@@ -101,7 +153,7 @@ def summarize(matches, team=TEAM, player='MNL'):
     for key, es in players.items():
         numbers = sorted({e['number'] for e in es if e['number'] is not None})
         ranking.append(dict(id=key, number=numbers[0] if len(numbers) == 1 else None,
-                            numbers=numbers, name=es[0]['player'], **event_stats(es)))
+                            numbers=numbers, name=es[0]['player'], playing_seconds=playing_seconds(matches, team, key), **event_stats(es)))
     ranking.sort(key=lambda p: (-p['points'], p['name']))
     # The name identifies the player; jersey numbers can change or be reused.
     focus = [e for e in events if player_key(e['player']) == player_key(player)]
