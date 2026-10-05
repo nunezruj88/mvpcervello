@@ -55,18 +55,32 @@ def application(env, start_response):
         if path == '/health' and method == 'GET': return reply({'status':'ok'})
         if path == '/api/data' and method == 'GET':
             all_matches = matches()
-            categories = category_names(all_matches)
+            hierarchy = qs.get('hierarchy', [''])[0] == '1'
+            players = player_names(all_matches, TEAM) if hierarchy else TRACKED_PLAYERS
+            player = player_key(qs.get('player', ['MNL'])[0])
+            if player not in {p['id'] for p in players}:
+                player = players[0]['id'] if players else ''
+            player_matches = [m for m in all_matches if any(is_team(e['team']) and player_key(e['player']) == player for e in m['events'])] if hierarchy else all_matches
+            categories = category_names([dict(m, events=[e for e in m['events'] if not is_team(e['team']) or player_key(e['player']) == player]) for m in player_matches]) if hierarchy else category_names(all_matches)
             requested = qs.get('category', [None])[0]
             category = next((c for c in categories if norm(c) == norm(requested)), requested) if requested is not None else (categories[0] if categories else '')
-            player = player_key(qs.get('player', ['MNL'])[0])
-            if player not in {'MNL', 'ELN'}:
-                player = 'MNL'
-            scoped_matches = category_matches(all_matches, category)
+            if hierarchy and category not in categories:
+                category = categories[0] if categories else ''
+            scoped_matches = category_matches(player_matches, category)
+            if hierarchy:
+                scoped_matches = [m for m in scoped_matches if any(is_team(e['team']) and player_key(e['player']) == player for e in m['events'])]
             selected = qs.get('match', [''])[0]
             competition_scope = competition_matches(scoped_matches, qs.get('competition', [None])[0], qs.get('competition_date', [''])[0])
+            if hierarchy and not competition_scope:
+                competition_scope = scoped_matches
+            if hierarchy and selected and not any(m['id'] == selected for m in competition_scope):
+                selected = ''
             chosen = [m for m in competition_scope if not selected or m['id'] == selected]
+            selected_scope = selected
+            if not selected and 'competition' in qs and competition_matches(scoped_matches, qs['competition'][0], qs.get('competition_date', [''])[0]):
+                selected_scope = 'competition:' + json.dumps([qs.get('competition_date', [''])[0], qs['competition'][0]], ensure_ascii=False, separators=(',', ':'))
             return reply(dict(categories=categories, selected_category=category, selected_team=TEAM,
-                              players=TRACKED_PLAYERS, selected_player=player,
+                              players=players, selected_player=player, selected_scope=selected_scope,
                               matches=[brief(m) for m in scoped_matches], summary=summarize(chosen, TEAM, player),
                               scoreboard=scoreboard(chosen[0]) if selected and len(chosen) == 1 else None,
                               events=[dict(e, match_id=m['id'], date=m['date']) for m in chosen for e in m['events'] if is_team(e['team'])]))
@@ -99,6 +113,9 @@ def application(env, start_response):
             team = qs.get('team',[''])[0]
             category = qs.get('category', [None])[0]
             result = category_matches(matches(), category) if category is not None else (team_matches(matches(), team) if team else matches())
+            if qs.get('hierarchy', [''])[0] == '1':
+                player = player_key(qs.get('player', [''])[0])
+                result = [m for m in result if any(is_team(e['team']) and player_key(e['player']) == player for e in m['events'])]
             result = competition_matches(result, qs.get('competition', [None])[0], qs.get('competition_date', [''])[0])
             result = [m for m in result if not selected or m['id']==selected]
             out = io.StringIO(newline='')
