@@ -10,10 +10,10 @@
 </aside>
 <main>
   <header class="top"><span>MVP Cervelló <span class="muted">/ Seguimiento de partidos</span></span><span class="season">BALONCESTO</span></header>
-  <div class="context-selectors"><label class="select-label">EQUIPO<select id="team-select" aria-label="Equipo"></select></label><label class="select-label">JUGADOR<select id="player-select" aria-label="Jugador"></select></label></div>
+  <div class="context-selectors"><label class="select-label">CATEGORÍA<select id="category-select" aria-label="Categoría"></select></label><label class="select-label">JUGADOR<select id="player-select" aria-label="Jugador"></select></label></div>
   <div id="notice" role="status" hidden></div>
   <section id="team" class="view">
-    <div class="heading"><div><p class="eyebrow">VISIÓN DE EQUIPO</p><h1>El partido, en números.</h1><p class="muted">Las acciones registradas del equipo seleccionado, reunidas en un solo lugar.</p></div><label class="select-label">PARTIDO<select id="team-match" aria-label="Partido del equipo"></select></label></div>
+    <div class="heading"><div><p class="eyebrow">VISIÓN DE EQUIPO</p><h1>El partido, en números.</h1><p class="muted">Las acciones del MVP Cervelló en la categoría seleccionada.</p></div><label class="select-label">PARTIDO<select id="team-match" aria-label="Partido del equipo"></select></label></div>
     <div class="coverage" id="team-coverage"></div>
     <div id="team-empty" class="empty" hidden><span class="empty-ball">◉</span><h2>Tu primer partido empieza aquí</h2><p>Sube el Excel o CSV extraído de una grabación para ver las estadísticas.</p><button class="primary" data-view="upload">Cargar un partido →</button></div>
     <div id="team-content"><div id="team-kpis" class="kpis"></div>
@@ -25,7 +25,7 @@
   </section>
   <section id="player" class="view" hidden>
     <div class="heading"><div><p class="eyebrow">SEGUIMIENTO INDIVIDUAL</p><h1 id="focus-heading">Foco en el jugador</h1><p class="muted">Su aportación al equipo, partido a partido.</p></div><label class="select-label">PARTIDO<select id="player-match" aria-label="Partido del jugador"></select></label></div>
-    <div class="player-banner"><div class="jersey" id="focus-number">—</div><div><p class="eyebrow" id="focus-team"></p><h2 id="focus-name">Selecciona un jugador</h2><p>Identificado por su nombre en los archivos del equipo seleccionado.</p></div></div>
+    <div class="player-banner"><div class="jersey" id="focus-number">—</div><div><p class="eyebrow" id="focus-team"></p><h2 id="focus-name">Selecciona un jugador</h2><p>Seguimiento de M.N.L. y E.L.N. dentro del MVP Cervelló.</p></div></div>
     <div class="coverage" id="player-coverage"></div><div id="player-kpis" class="kpis"></div>
     <div class="grid"><article class="panel"><p class="eyebrow">LANZAMIENTOS REGISTRADOS</p><h2>Su tiro, al detalle</h2><div id="shooting"></div><p class="footnote">Acierto sobre los intentos registrados. Si faltan tiros fallados en la fuente, este porcentaje no representa el acierto real.</p></article>
     <article class="panel"><p class="eyebrow">EVOLUCIÓN</p><h2>Puntos por partido</h2><div id="trend" class="bars"></div></article></div>

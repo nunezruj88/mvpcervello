@@ -6,7 +6,7 @@ import re
 import zipfile
 from datetime import date, datetime, time
 from openpyxl import load_workbook
-from stats import norm
+from stats import norm, is_team
 
 HEADERS = ['Orden', 'Fecha_partido', 'Local', 'Visitante', 'Periodo', 'Tiempo_restante', 'Equipo',
            'Dorsal', 'Jugador', 'Accion_original', 'Puntos_Begues_periodo', 'Puntos_Cervello_periodo', 'Puntos_accion', 'Observaciones', 'Categoria_equipo']
@@ -111,7 +111,13 @@ def parse(name, data, complete=False):
                            category=text(r.get('Categoria_equipo'))))
     if len(identities) != 1: raise ImportError('Cada archivo debe contener un solo partido.')
     dt, h, a = next(iter(identities))
-    key = hashlib.sha256(f'{dt}|{h}|{a}'.encode()).hexdigest()[:24]
+    categories = {norm(e.get('category', '')) for e in events if is_team(e['team']) and e.get('category')}
+    if len(categories) > 1:
+        raise ImportError('Cada archivo debe contener una sola categoría del MVP Cervelló.')
+    category_key = next(iter(categories), '')
+    identity = f'{dt}|{h}|{a}' + (f'|{category_key}' if category_key else '')
+    key = hashlib.sha256(identity.encode()).hexdigest()[:24]
+    legacy_id = hashlib.sha256(f'{dt}|{h}|{a}'.encode()).hexdigest()[:24]
     warnings = ['El marcador de cada tarjeta corresponde al período, no al acumulado del partido.']
     if not complete: warnings.append('Importación parcial: las estadísticas solo representan las acciones subidas.')
     if unknown: warnings.append('Acciones conservadas sin clasificación estadística: ' + ', '.join(sorted(unknown)))
@@ -119,4 +125,4 @@ def parse(name, data, complete=False):
     duplicates = len(events) - len({(e['period'],e['clock'],norm(e['team']),e['number'],norm(e['action'])) for e in events})
     if duplicates: warnings.append(f'{duplicates} acciones coinciden en período, tiempo, jugador y tipo. Revisar: se han conservado.')
     return dict(id=key, date=dt, home=text(rows[0]['Local']), away=text(rows[0]['Visitante']), complete=bool(complete),
-                filename=name, events=events, warnings=warnings, source_hash=hashlib.sha256(data).hexdigest())
+                filename=name, legacy_id=legacy_id, events=events, warnings=warnings, source_hash=hashlib.sha256(data).hexdigest())

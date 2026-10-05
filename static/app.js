@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let current='team', selected='', selectedTeam='', selectedPlayer='', data=null, pending=null, refreshVersion=0;
+let current='team', selected='', selectedTeam='MVP CERVELLÓ', selectedCategory='', selectedPlayer='MNL', data=null, pending=null, refreshVersion=0;
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 const fmt=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:1}).format(n);
 const date=s=>s.split('-').reverse().join('/');
@@ -16,7 +16,7 @@ function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
 function renderFocus(){const s=data.summary, f=s.focus;
  const name=data.players.find(p=>p.id===selectedPlayer)?.name||'Selecciona un jugador';
- $('focus-heading').textContent='Foco en '+name;$('focus-name').textContent=name;$('focus-team').textContent=selectedTeam;$('focus-actions-title').textContent='Acciones de '+name;
+ $('focus-heading').textContent='Foco en '+name;$('focus-name').textContent=name;$('focus-team').textContent=selectedTeam+' · '+(selectedCategory||'Sin categoría');$('focus-actions-title').textContent='Acciones de '+name;
  const numbers=[...new Set(s.focus_events.map(e=>e.number).filter(n=>n!==null))];$('focus-number').textContent=numbers.length===1?numbers[0]:'—';coverage('player-coverage',s);kpis('player-kpis',[
  ['Puntos registrados',f.points,'De las acciones importadas'],['Canastas de 2',f.made2,`${f.missed2} fallos registrados`],['Faltas personales',f.fouls,'Una falta por acción'],['Acciones',f.events,'Del jugador en la selección']]);
  $('shooting').replaceChildren(...[1,2,3].map(n=>{const box=el('div',undefined,'shot'),text=el('div');text.append(el('h3',n===1?'Tiros libres':`Tiros de ${n}`),el('p',`${f['made'+n]} ${f['made'+n]===1?'acierto':'aciertos'} / ${f['attempts'+n]} ${f['attempts'+n]===1?'intento registrado':'intentos registrados'}`));box.append(text,el('strong',f['percent'+n]===null?'—':fmt(f['percent'+n])+' %'));const track=el('div',undefined,'bar-track'),fill=el('div',undefined,'bar-fill');fill.style.width=(f['percent'+n]||0)+'%';track.append(fill);box.append(track);return box;}));
@@ -25,7 +25,7 @@ function renderFocus(){const s=data.summary, f=s.focus;
  table($('focus-table'),['Fecha','Rival','Período','Tiempo restante','Acción','Puntos'],rows.map(e=>[date(e.date),e.opponent,e.period,e.clock,e.action,e.points]));
 }
 function render(){const s=data.summary;
- $('team-select').replaceChildren(...(data.teams.length?data.teams.map(t=>new Option(t,t)):[new Option('Sin equipos importados','')]));$('team-select').value=selectedTeam;
+ $('category-select').replaceChildren(...(data.categories.length?data.categories.map(c=>new Option(c||'Sin categoría',c)):[new Option('Sin categorías importadas','')]));$('category-select').value=selectedCategory;
  $('player-select').replaceChildren(...(data.players.length?data.players.map(p=>new Option(p.name,p.id)):[new Option('Sin jugadores registrados','')]));$('player-select').value=selectedPlayer;
  $('player-select').disabled=!data.players.length;
 for(const id of ['team-match','player-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...data.matches.map(m=>new Option(`${date(m.date)} · ${m.home} – ${m.away}${m.complete?'':' (parcial)'}`,m.id)));select.value=selected;}
@@ -34,12 +34,12 @@ for(const id of ['team-match','player-match']){const select=$(id);select.replace
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.id===selectedPlayer)));
  const pmax=Math.max(1,...s.periods.map(p=>p.team_points));$('periods').replaceChildren(...s.periods.map(p=>{const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar');b.style.height=(p.team_points/pmax*150)+'px';c.append(el('strong',fmt(p.team_points)),b,el('span',p.period));return c;}));
  table($('players-table'),['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Acciones'],s.players.map(p=>[p.name,p.numbers.join(', ')||'—',p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,p.events]),1);
- $('export-team').href='/api/export?'+new URLSearchParams({team:selectedTeam,...(selected?{match:selected}:{})});
+ $('export-team').href='/api/export?'+new URLSearchParams({category:selectedCategory,...(selected?{match:selected}:{})});
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
  renderFocus();
 }
-async function refresh(){const version=++refreshVersion;try{const result=await api('/api/data?'+new URLSearchParams({team:selectedTeam,player:selectedPlayer,match:selected}));if(version!==refreshVersion)return;data=result;selectedTeam=data.selected_team;selectedPlayer=data.selected_player;render();}catch(e){if(version===refreshVersion)notice(e.message,true);}}
-$('team-select').addEventListener('change',async e=>{selectedTeam=e.target.value;selectedPlayer='';selected='';$('action-search').value='';await refresh();});
+async function refresh(){const version=++refreshVersion;try{const result=await api('/api/data?'+new URLSearchParams({category:selectedCategory,player:selectedPlayer,match:selected}));if(version!==refreshVersion)return;data=result;selectedTeam=data.selected_team;selectedCategory=data.selected_category;selectedPlayer=data.selected_player;render();}catch(e){if(version===refreshVersion)notice(e.message,true);}}
+$('category-select').addEventListener('change',async e=>{selectedCategory=e.target.value;selected='';$('action-search').value='';await refresh();});
 $('player-select').addEventListener('change',async e=>{selectedPlayer=e.target.value;$('action-search').value='';await refresh();});
 for(const id of ['team-match','player-match'])$(id).addEventListener('change',async e=>{selected=e.target.value;await refresh();});
 $('action-search').addEventListener('input',()=>{if(data)renderFocus();});
@@ -59,7 +59,7 @@ $('upload-form').addEventListener('submit',async e=>{e.preventDefault();const fi
  $('replace-label').hidden=!result.exists;$('preview').hidden=false;$('notice').hidden=true;$('preview').scrollIntoView({behavior:'smooth',block:'start'});
  }catch(error){notice(error.message,true);}finally{$('preview-button').disabled=false;}});
 $('save').addEventListener('click',async()=>{if(!pending)return;if(pending.result.exists&&!$('replace').checked){notice('Marca reemplazar para actualizar este partido.',true);return;}$('save').disabled=true;try{
- const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,replace:$('replace').checked})});selected=result.match.id;if(![result.match.home,result.match.away].includes(selectedTeam)){selectedTeam=result.match.home;selectedPlayer='';}resetPreview();$('upload-form').reset();$('file-label').textContent='Selecciona o arrastra tu archivo';await refresh();show('team');notice('Partido guardado. Las estadísticas ya están actualizadas.');window.scrollTo({top:0,behavior:'smooth'});
+ const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,replace:$('replace').checked})});selected=result.match.id;selectedCategory=pending.result.events.find(e=>e.team.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim()==='MVP CERVELLO')?.category||'';resetPreview();$('upload-form').reset();$('file-label').textContent='Selecciona o arrastra tu archivo';await refresh();show('team');notice('Partido guardado. Las estadísticas ya están actualizadas.');window.scrollTo({top:0,behavior:'smooth'});
  }catch(error){notice(error.message,true);}finally{$('save').disabled=false;}});
 show(['team','player','upload'].includes(location.hash.slice(1))?location.hash.slice(1):'team');refresh();
 

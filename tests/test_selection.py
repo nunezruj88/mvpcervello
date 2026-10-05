@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 import test_app
 import app
 from importer import parse
-from stats import summarize
+from stats import summarize, category_matches
 
 
 class SelectionTests(unittest.TestCase):
@@ -15,57 +15,53 @@ class SelectionTests(unittest.TestCase):
 
     def setUp(self):
         test_app.Tests.setUp(self)
-        header = 'Fecha_partido;Local;Visitante;Periodo;Tiempo_restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_accion\n'
-        fixtures = [
-            ('2026-10-01', 'MVP CERVELLÓ', 'RIVAL A', [('M.N.L.', 12, 2), ('SEGUNDO', 9, 3), ('OTRO', 12, 1)]),
-            ('2026-10-02', 'EQUIPO B', 'RIVAL B', [('MNL', 8, 3), ('SEGUNDO', 12, 2)]),
-            ('2026-10-03', 'MVP CERVELLÓ', 'RIVAL A', [('MNL', 7, 3)]),
-        ]
         self.fixture_matches = []
-        for dt, team, rival, players in fixtures:
-            rows = ''.join(f'{dt};{team};{rival};P1;05:00;{team};{number};{name};Cistella de {points};{points}\n'
-                           for name, number, points in players)
-            m = parse('fixture.csv', (header + rows).encode())
-            self.fixture_matches.append(m)
+        header = 'Fecha_partido;Local;Visitante;Periodo;Tiempo_restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_accion;Categoria_equipo\n'
+        for category, mnl, eln in [('Mini masculí', 2, 3), ('Infantil', 3, 1)]:
+            rows = ''.join(f'2026-10-03;CB BEGUES;MVP CERVELLÓ;P1;05:00;MVP CERVELLÓ;12;{name};Cistella de {points};{points};{category}\n'
+                           for name, points in [('M.N.L.', mnl), ('E.L.N.', eln), ('OTRO', 2)])
+            match = parse('fixture.csv', (header + rows).encode())
+            self.fixture_matches.append(match)
             with app.connect() as con:
-                con.execute('INSERT INTO matches VALUES (?,?)', (m['id'], json.dumps(m)))
+                con.execute('INSERT INTO matches VALUES (?,?)', (match['id'], json.dumps(match)))
 
-    def test_team_and_player_isolation(self):
-        a = self.call('/api/data', query=urlencode(dict(team='MVP CERVELLÓ', player='MNL')))['json']
-        b = self.call('/api/data', query=urlencode(dict(team='EQUIPO B', player='M.N.L.')))['json']
-        self.assertEqual(a['summary']['team']['points'], 9)
-        self.assertEqual(a['summary']['focus']['points'], 5)
-        self.assertEqual(a['summary']['matches'], 2)
-        self.assertEqual(b['summary']['team']['points'], 5)
-        self.assertEqual(b['summary']['focus']['points'], 3)
-        self.assertEqual(b['summary']['matches'], 1)
-        self.assertEqual({e['team'] for e in b['events']}, {'EQUIPO B'})
-        mnl = next(p for p in a['summary']['players'] if p['id'] == 'MNL')
-        self.assertEqual(mnl['numbers'], [7, 12])
-        self.assertEqual(mnl['points'], 5)
-        for team, points in [('MVP CERVELLÓ', 3), ('EQUIPO B', 2)]:
-            data = self.call('/api/data', query=urlencode(dict(team=team, player='SEGUNDO')))['json']
-            self.assertEqual(data['summary']['focus']['points'], points)
+    def test_category_and_player_isolation(self):
+        self.assertNotEqual(self.fixture_matches[0]['id'], self.fixture_matches[1]['id'])
+        for category, mnl, eln in [('Mini masculí', 2, 3), ('Infantil', 3, 1)]:
+            for player, expected in [('MNL', mnl), ('E.L.N.', eln)]:
+                data = self.call('/api/data', query=urlencode(dict(category=category, player=player)))['json']
+                self.assertEqual(data['summary']['focus']['points'], expected)
+                self.assertEqual(data['summary']['matches'], 1)
+                self.assertEqual({p['id'] for p in data['players']}, {'MNL', 'ELN'})
+                self.assertEqual(len(data['matches']), 1)
+                self.assertEqual(data['selected_team'], 'MVP CERVELLÓ')
 
-    def test_match_filter_and_export(self):
-        m = self.fixture_matches[0]
-        data = self.call('/api/data', query=urlencode(dict(team='MVP CERVELLÓ', player='MNL', match=m['id'])))['json']
-        self.assertEqual(data['summary']['focus']['points'], 2)
-        self.assertEqual(len(data['matches']), 2)
-        self.assertEqual(len(data['players']), 3)
-        out = self.call('/api/export', query=urlencode(dict(team='EQUIPO B')))['body']
-        rows = list(csv.DictReader(io.StringIO(out.decode('utf-8-sig')), delimiter=';'))
-        self.assertEqual({r['Equipo'] for r in rows}, {'EQUIPO B'})
-        self.assertEqual(summarize([parse('export.csv', out)], 'EQUIPO B')['team']['points'], 5)
+    def test_category_export(self):
+        out = self.call('/api/export', query=urlencode(dict(category='Mini masculí')))['body']
+        match = parse('export.csv', out)
+        self.assertEqual(match['id'], self.fixture_matches[0]['id'])
+        self.assertEqual(summarize([match])['focus']['points'], 2)
 
-    def test_unknown_selection_returns_no_mixed_data(self):
-        data = self.call('/api/data', query='team=DESCONOCIDO&player=MNL')['json']
+    def test_unknown_and_uncategorized(self):
+        data = self.call('/api/data', query='category=DESCONOCIDA')['json']
         self.assertEqual(data['summary']['matches'], 0)
         self.assertEqual(data['events'], [])
-        data = self.call('/api/data', query='team=EQUIPO+B&player=DESCONOCIDO')['json']
-        self.assertEqual(data['summary']['focus']['points'], 0)
+        self.assertEqual(category_matches(self.fixture_matches, ''), [])
 
-    def test_name_required_for_focus_not_number(self):
-        m = self.fixture_matches[0]
-        self.assertEqual(summarize([m])['focus']['points'], 2)
-        self.assertEqual(summarize([m], player='OTRO')['focus']['points'], 1)
+    def test_legacy_categorized_replacement(self):
+        rows = list(csv.reader(io.StringIO(self.data.decode('utf-8-sig')), delimiter=';'))
+        rows[0].append('Categoria_equipo')
+        for row in rows[1:]:
+            row.append('Cadet')
+        self.call('/api/import', 'POST', self.payload())
+        original_count = len(app.matches())
+        out = io.StringIO(newline='')
+        csv.writer(out, delimiter=';').writerows(rows)
+        self.data = out.getvalue().encode()
+        preview = self.call('/api/import', 'POST', self.payload(preview=True))['json']
+        self.assertTrue(preview['exists'])
+        self.assertEqual(self.call('/api/import', 'POST', self.payload())['status'], '409 Conflict')
+        self.assertEqual(self.call('/api/import', 'POST', self.payload(replace=True))['status'], '201 Created')
+        self.assertEqual(len(app.matches()), original_count)
+
+    payload = test_app.Tests.payload

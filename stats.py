@@ -32,6 +32,30 @@ def player_names(matches, team):
                 names.setdefault(player_key(e['player']), e['player'])
     return [dict(id=k, name=v) for k, v in sorted(names.items(), key=lambda item: norm(item[1]))]
 
+TRACKED_PLAYERS = [dict(id='MNL', name='M.N.L.'), dict(id='ELN', name='E.L.N.')]
+
+def category_names(matches):
+    names = {}
+    for m in team_matches(matches, TEAM):
+        for e in m['events']:
+            if is_team(e['team']):
+                value = str(e.get('category', '')).strip()
+                names.setdefault(norm(value), value)
+    return sorted(names.values(), key=norm)
+
+def category_matches(matches, category):
+    result = []
+    for m in team_matches(matches, TEAM):
+        own = [e for e in m['events'] if is_team(e['team'])]
+        if not any(norm(e.get('category', '')) == norm(category) for e in own):
+            continue
+        # Keep only this category's MVP actions. Opponent actions are retained
+        # for the selected match and cannot contribute to MVP statistics.
+        events = [e for e in m['events'] if not is_team(e['team']) or norm(e.get('category', '')) == norm(category)]
+        reduced = any(norm(e.get('category', '')) != norm(category) for e in own)
+        result.append(dict(m, events=events, complete=m['complete'] and not reduced))
+    return result
+
 def event_stats(events):
     result = dict(points=0, fouls=0, made1=0, missed1=0, made2=0, missed2=0,
                   made3=0, missed3=0, rebounds=0, assists=0, steals=0, turnovers=0, blocks=0, events=0)
