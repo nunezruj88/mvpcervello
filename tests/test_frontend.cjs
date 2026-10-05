@@ -16,7 +16,8 @@ const base = 'http://127.0.0.1:18092';
 function fixture(category, points, competition='', start='', matchDate='2026-10-03') {
   return Buffer.from('Fecha_partido;Local;Visitante;Periodo;Tiempo_restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_accion;Categoria_equipo;Competicion;Fecha_competicion\n' +
     [['M.N.L.', points], ['E.L.N.', 1]].map(([name, score])=>
-      `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;05:00;MVP CERVELLÓ;12;${name};Cistella de ${score};${score};${category};${competition};${start}\n`).join(''));
+      `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;05:00;MVP CERVELLÓ;12;${name};Cistella de ${score};${score};${category};${competition};${start}\n`).join('') +
+      `${matchDate};CB BEGUES;MVP CERVELLÓ;P1;04:00;CB BEGUES;8;RIVAL;Cistella de 2;2;${category};${competition};${start}\n`);
 }
 (async()=>{
   for(let i=0;i<100;i++) {
@@ -68,12 +69,20 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.selectOption('#team-match',groupedMatch);
   await page.waitForFunction(()=>document.querySelector('#player-match').value===document.querySelector('#team-match').value && document.querySelector('#player-kpis strong').textContent==='3');
   assert.equal(await page.locator('#player-kpis strong').first().textContent(),'3');
-  assert.equal(await page.locator('#match-scoreboard strong').textContent(),'0 – 4');
+  assert.equal(await page.locator('#match-scoreboard strong').textContent(),'2 – 4');
+  assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['4','2']);
+  assert.ok((await page.locator('#period-legend').textContent()).includes('CB BEGUES'));
+  assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Puntos registrados'));
+  assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Jugadores con acciones'));
+  assert.ok((await page.locator('#team-shooting').textContent()).includes('Tiros libres'));
+  assert.ok((await page.locator('#team-shooting').textContent()).includes('Tiros de 2'));
+  assert.ok((await page.locator('#team-shooting').textContent()).includes('Triples'));
   assert.ok((await page.locator('#match-scoreboard').textContent()).includes('Marcador parcial'));
   assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
   const competition=await page.locator('#team-match optgroup').nth(1).locator('option').first().getAttribute('value');
   await page.selectOption('#team-match',competition);
   await page.waitForFunction(()=>document.querySelector('#player-kpis strong').textContent==='6');
+  assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['8','4']);
   assert.equal(await page.locator('#match-scoreboard').count(),0);
   assert.ok((await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
   assert.ok((await page.locator('#export-team').getAttribute('href')).includes('competition_date=2026-09-01'));

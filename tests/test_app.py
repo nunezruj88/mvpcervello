@@ -77,6 +77,15 @@ class Tests(unittest.TestCase):
         m['events'].append(dict(m['events'][2],team='CB BEGUES',number=12,player='OTRO JUGADOR',points=2))
         self.assertEqual(summarize([m])['focus']['points'],2)
 
+    def test_opponent_only_period(self):
+        m=parse(EXAMPLE.name,self.data)
+        m['events'].append(dict(m['events'][2],team='CB BEGUES',period='P9',points=3))
+        m['events'].append(dict(m['events'][2],team='',period='P9',points=2))
+        period=summarize([m])['periods'][-1]
+        self.assertEqual(period['period'],'P9')
+        self.assertEqual(period['team_points'],0)
+        self.assertEqual(period['opponent_points'],3)
+
     def test_export_roundtrip_and_origin(self):
         self.call('/api/import','POST',self.payload())
         exported=self.call('/api/export')['body']
