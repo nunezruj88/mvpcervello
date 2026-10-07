@@ -136,4 +136,19 @@ class Tests(unittest.TestCase):
         out=io.BytesIO();book.save(out)
         self.assertEqual(parse('duration.xlsx',out.getvalue())['period_seconds'],600)
 
+    def test_bench_period_before_later_entries(self):
+        m=parse(EXAMPLE.name,self.data)
+        template=m['events'][2]
+        def event(period,clock,action,player='JUGADOR PRUEBA'):
+            return dict(template,team='MVP CERVELLÓ',player=player,period=period,clock=clock,action=action,points=0)
+        m['period_seconds']=600
+        m['events']=[event('P1','05:23','Entra al camp'),event('P1','01:27','Surt del camp'),
+                     event('P2','','Final de període',player=''),
+                     event('P3','05:41','Entra al camp'),event('P3','04:10','Surt del camp'),
+                     event('P4','05:06','Entra al camp'),event('P4','','Final de període',player='')]
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','JUGADORPRUEBA'),397)
+        # A P1 entry can establish the P2 starter without counting any P1 time.
+        m['events']=[event('P1','05:00','Entra al camp'),event('P2','08:00','Surt del camp')]
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','JUGADORPRUEBA'),120)
+
 if __name__=='__main__':unittest.main()
