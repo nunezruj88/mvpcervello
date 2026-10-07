@@ -48,6 +48,7 @@ def read_rows(name, data):
     else: raise ImportError('Selecciona un archivo .xlsx o .csv.')
     if not values: raise ImportError('El archivo está vacío.')
     headers = [str(v or '').strip() for v in values[0]]
+    headers = ['Tiempo_restante' if h.lower() == 'tiempo_restante' else h for h in headers]
     if len(set(headers)) != len(headers):
         if headers.count('Equipo') > 1:
             raise ImportError('Hay dos cabeceras Equipo. Renombra la columna de categoría a Categoria_equipo.')
@@ -151,8 +152,12 @@ def parse(name, data, complete=False):
     # Remove overlaps only across recordings before exporting. Identical actions may be legitimate.
     duplicates = len(events) - len({(e['period'],e['clock'],norm(e['team']),e['number'],norm(e['action'])) for e in events})
     if duplicates: warnings.append(f'{duplicates} acciones coinciden en período, tiempo, jugador y tipo. Revisar: se han conservado.')
+    first_clock = events[0]['clock']
+    period_seconds = sum(int(value) * factor for value, factor in zip(first_clock.split(':'), (60, 1))) if first_clock else None
+    if not period_seconds:
+        warnings.append('Falta la duración del período: indica el tiempo inicial en Tiempo_restante de la primera fila.')
     display_category = next((e['category'] for e in events if is_team(e['team'])), '')
     return dict(id=key, legacy_id=legacy_id, category=display_category,
-                competition=competition, competition_date=competition_date,
+                competition=competition, competition_date=competition_date, period_seconds=period_seconds,
                 date=dt, home=text(rows[0]['Local']), away=text(rows[0]['Visitante']), complete=bool(complete),
                 filename=name, events=events, warnings=warnings, source_hash=hashlib.sha256(data).hexdigest())

@@ -90,11 +90,20 @@ def event_stats(events):
     return result
 
 def playing_seconds(matches, team, player):
-    """Recorded court time from P2; six-minute periods, no P1 inference."""
+    """Recorded court time from P2; file-defined periods, no P1 inference."""
     total = 0
     relevant = [m for m in matches if any(norm(e['team']) == norm(team)
                 and player_key(e['player']) == player for e in m['events'])]
     for match in relevant:
+        duration = match.get('period_seconds')
+        if duration is None:
+            first_clock = match['events'][0].get('clock', '') if match['events'] else ''
+            if not re.fullmatch(r'\d{2}:[0-5]\d', first_clock):
+                return None
+            minutes, seconds = map(int, first_clock.split(':'))
+            duration = minutes * 60 + seconds
+        if duration <= 0:
+            return None
         periods = sorted({int(e['period'][1:]) for e in match['events'] if int(e['period'][1:]) >= 2})
         if not periods or periods != list(range(2, periods[-1] + 1)):
             return None
@@ -104,23 +113,23 @@ def playing_seconds(matches, team, player):
             changes = [e for e in all_events if norm(e['team']) == norm(team)
                        and player_key(e['player']) == player
                        and norm(e['action']).startswith(('ENTRA', 'SURT'))]
-            start = 360 if on_court else None
-            previous = 360
+            start = duration if on_court else None
+            previous = duration
             for e in changes:
                 if not e['clock']:
                     return None
                 minutes, seconds = map(int, e['clock'].split(':'))
                 clock = minutes * 60 + seconds
-                if clock > previous or clock > 360:
+                if clock > previous or clock > duration:
                     return None
                 previous = clock
                 entering = norm(e['action']).startswith('ENTRA')
                 if on_court is None:
                     # The first exit identifies a starter in this period.
                     on_court = not entering
-                    start = 360 if on_court else None
+                    start = duration if on_court else None
                 if entering:
-                    if on_court and clock != 360:
+                    if on_court and clock != duration:
                         return None
                     if not on_court:
                         start = clock
