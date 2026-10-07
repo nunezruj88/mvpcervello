@@ -109,7 +109,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.equal(await page.locator('#team-match').inputValue(),competition);
   await page.selectOption('#team-match','');
   await page.waitForFunction(()=>document.querySelector('#team-kpis strong').textContent==='4');
-  let home=fixture('Cadet',3,'','', '2026-11-01').toString().replaceAll(';CB BEGUES;MVP CERVELLÓ;',';MVP CERVELLÓ;CB BEGUES;');
+  let home=fixture('Cadet',3,'','', '2026-11-01').toString().replace('P1;05:00','P1;06:00').replaceAll(';CB BEGUES;MVP CERVELLÓ;',';MVP CERVELLÓ;CB BEGUES;');
   home += [['M.N.L.','06:00','Entra al camp'],['M.N.L.','03:30','Surt del camp'],['E.L.N.','04:00','Entra al camp'],['E.L.N.','01:00','Surt del camp']].map(([name,clock,action])=>`2026-11-01;MVP CERVELLÓ;CB BEGUES;P2;${clock};MVP CERVELLÓ;12;${name};${action};0;Cadet;;\n`).join('');
   const imported=await fetch(base+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:'home.csv',data:Buffer.from(home).toString('base64')})});
   assert.equal(imported.status,201);

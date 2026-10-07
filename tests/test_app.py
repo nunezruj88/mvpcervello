@@ -88,6 +88,7 @@ class Tests(unittest.TestCase):
 
     def test_playing_time_excludes_p1_and_crosses_periods(self):
         m=parse(EXAMPLE.name,self.data)
+        m['period_seconds']=360
         template=m['events'][2]
         def event(period,clock,action):
             return dict(template,team='MVP CERVELLÓ',player='M.N.L.',period=period,clock=clock,action=action,points=0)
@@ -112,5 +113,27 @@ class Tests(unittest.TestCase):
         self.assertEqual(summarize([parse('export.csv',exported)])['team']['points'],6)
         result=self.call('/api/import','POST',self.payload(replace=True),origin='http://otro-host')
         self.assertEqual(result['status'],'403 Forbidden')
+
+    def test_duration_from_first_row_and_legacy_data(self):
+        header='Fecha_partido;Local;Visitante;Periodo;Tiempo_Restante;Equipo;Dorsal;Jugador;Accion_original;Puntos_accion\n'
+        rows='2026-10-03;CB BEGUES;MVP CERVELLÓ;P1;10:00;MVP CERVELLÓ;12;M.N.L.;Entra al camp;0\n'
+        rows+='2026-10-03;CB BEGUES;MVP CERVELLÓ;P2;10:00;MVP CERVELLÓ;12;M.N.L.;Entra al camp;0\n'
+        rows+='2026-10-03;CB BEGUES;MVP CERVELLÓ;P2;07:00;MVP CERVELLÓ;12;M.N.L.;Surt del camp;0\n'
+        self.data=(header+rows).encode()
+        m=parse('duration.csv',self.data)
+        self.assertEqual(m['period_seconds'],600)
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),180)
+        del m['period_seconds']
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),180)
+        self.assertEqual(self.call('/api/import','POST',self.payload())['status'],'201 Created')
+        self.assertEqual(app.matches()[0]['period_seconds'],600)
+        self.assertEqual(self.call('/api/data')['json']['summary']['players'][0]['playing_seconds'],180)
+        import csv
+        from datetime import time
+        book=Workbook();sheet=book.active
+        for row in csv.reader(io.StringIO(self.data.decode()),delimiter=';'): sheet.append(row)
+        sheet['E2']=time(0,10,0)
+        out=io.BytesIO();book.save(out)
+        self.assertEqual(parse('duration.xlsx',out.getvalue())['period_seconds'],600)
 
 if __name__=='__main__':unittest.main()
