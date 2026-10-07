@@ -7,7 +7,7 @@ from pathlib import Path
 from openpyxl import Workbook
 import app
 from importer import parse, ImportError, REQUIRED
-from stats import summarize, playing_seconds
+from stats import summarize, playing_seconds, select_mvp, event_stats
 
 EXAMPLE = Path(__file__).resolve().parents[1] / 'examples' / 'partido_ficticio.csv'
 
@@ -150,5 +150,19 @@ class Tests(unittest.TestCase):
         # A P1 entry can establish the P2 starter without counting any P1 time.
         m['events']=[event('P1','05:00','Entra al camp'),event('P2','08:00','Surt del camp')]
         self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','JUGADORPRUEBA'),120)
+
+    def test_mvp_points_efficiency_fouls_and_ties(self):
+        def player(name, made, missed, fouls):
+            events=[dict(action='Cistella de 2',points=2)]*made
+            events += [dict(action='Intent fallat de 2',points=0)]*missed
+            events += [dict(action='Personal',points=0)]*fouls
+            return dict(name=name,**event_stats(events))
+        efficient=player('A',3,0,0)
+        scorer=player('B',4,5,0)
+        self.assertEqual(select_mvp([efficient,scorer])['players'],['A'])
+        self.assertEqual(select_mvp([player('A',3,0,3),player('B',3,0,1)])['players'],['B'])
+        self.assertEqual(select_mvp([player('A',3,0,0),player('B',3,0,0)])['players'],['A','B'])
+        self.assertEqual(select_mvp([efficient])['shooting_percent'],100)
+        self.assertIsNone(select_mvp([player('Sin tiros',0,0,0)]))
 
 if __name__=='__main__':unittest.main()

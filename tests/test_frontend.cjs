@@ -72,6 +72,8 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.waitForFunction(()=>document.querySelector('#player-kpis strong').textContent==='3');
   assert.equal(await page.locator('#player-kpis strong').first().textContent(),'3');
   assert.equal(await page.locator('#match-scoreboard strong').textContent(),'2 – 4');
+  assert.equal(await page.locator('#match-mvp .label').textContent(),'MVP del partido');
+  assert.equal(await page.locator('#match-mvp strong').textContent(),'M.N.L.');
   assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['2','4']);
   assert.ok((await page.locator('#period-legend').textContent()).includes('CB BEGUES'));
   assert.ok(!(await page.locator('#team-kpis').textContent()).includes('Puntos registrados'));
@@ -102,6 +104,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['8','4']);
   assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['2','4']);
   assert.equal(await page.locator('#match-scoreboard').count(),0);
+  assert.equal(await page.locator('#match-mvp .label').textContent(),'MVP de la selección');
   assert.ok((await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
   assert.ok((await page.locator('#export-team').getAttribute('href')).includes('competition_date=2026-09-01'));
   await page.selectOption('#player-select','ELN');
