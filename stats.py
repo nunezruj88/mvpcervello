@@ -156,6 +156,26 @@ def playing_seconds(matches, team, player):
     return total if relevant else None
 
 
+def select_mvp(players):
+    """Custom recorded-data rating, not an official basketball valuation."""
+    candidates = []
+    for p in players:
+        made = sum(p[f'made{n}'] for n in (1, 2, 3))
+        attempts = sum(p[f'attempts{n}'] for n in (1, 2, 3))
+        if not attempts:
+            continue
+        score = p['points'] + made - (attempts - made) - p['fouls']
+        efficiency = made / attempts
+        candidates.append((score, efficiency, p['points'], -p['fouls'], p))
+    if not candidates:
+        return None
+    best = max(c[:4] for c in candidates)
+    winners = sorted([c[4] for c in candidates if c[:4] == best], key=lambda p: norm(p['name']))
+    p = winners[0]
+    return dict(players=[p['name'] for p in winners], score=best[0], points=p['points'],
+                shooting_percent=round(best[1] * 100, 1), fouls=p['fouls'])
+
+
 def summarize(matches, team=TEAM, player='MNL'):
     matches = team_matches(matches, team)
     events = [dict(e, match_id=m['id'], date=m['date'], opponent=m['away'] if norm(m['home']) == norm(team) else m['home'])
@@ -188,5 +208,5 @@ def summarize(matches, team=TEAM, player='MNL'):
         periods.append(dict(period=p, team_points=sum(e['points'] for e in es),
                             opponent_points=sum(e['points'] for e in opponent_events if e['period'] == p),
                             focus_points=sum(e['points'] for e in fs)))
-    return dict(team=event_stats(events), opponent=event_stats(opponent_events), players=ranking, focus=event_stats(focus), focus_events=focus,
+    return dict(team=event_stats(events), opponent=event_stats(opponent_events), players=ranking, mvp=select_mvp(ranking), focus=event_stats(focus), focus_events=focus,
                 periods=periods, trend=trend, matches=len(matches), partial=sum(not m['complete'] for m in matches))
