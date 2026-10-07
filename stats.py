@@ -107,7 +107,13 @@ def playing_seconds(matches, team, player):
         periods = sorted({int(e['period'][1:]) for e in match['events'] if int(e['period'][1:]) >= 2})
         if not periods or periods != list(range(2, periods[-1] + 1)):
             return None
-        on_court = None
+        # P1 is excluded from time, but its final substitution can establish
+        # whether the player starts P2 on court or on the bench.
+        initial_changes = [e for e in match['events'] if e['period'] == 'P1'
+                           and norm(e['team']) == norm(team)
+                           and player_key(e['player']) == player
+                           and norm(e['action']).startswith(('ENTRA', 'SURT'))]
+        on_court = norm(initial_changes[-1]['action']).startswith('ENTRA') if initial_changes else None
         for period in periods:
             all_events = [e for e in match['events'] if e['period'] == f'P{period}']
             changes = [e for e in all_events if norm(e['team']) == norm(team)
