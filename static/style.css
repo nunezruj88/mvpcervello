@@ -12,3 +12,5 @@
 .timeout-card .bar-row{grid-template-columns:minmax(0,1fr) 28px;gap:6px;margin:10px 0}.timeout-card .bar-label{grid-column:1 / -1;overflow-wrap:anywhere}.timeout-card .bar-row strong{font-size:18px;letter-spacing:0}.timeout-card .bar-label span{display:none}
 
 #team-kpis .label{font-weight:700;color:var(--ink)}
+
+#team-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}#team-kpis .kpi{min-width:0}.mvp-card strong{font-size:19px;letter-spacing:0;overflow-wrap:anywhere;margin:10px 0}.mvp-card details{font-size:11px;color:var(--muted);margin-top:10px}.mvp-card summary{cursor:pointer;color:var(--blue)}@media(max-width:1150px){#team-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:750px){#team-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -90,6 +90,11 @@ function render(){const s=data.summary;
  const timeoutCard=el('div',undefined,'kpi timeout-card');timeoutCard.append(el('span','Tiempos muertos solicitados','label'));const timeoutChart=el('div');timeoutChart.id='timeouts';timeoutCard.append(timeoutChart);$('team-kpis').append(timeoutCard);
  const timeoutMax=Math.max(1,s.team.timeouts,s.opponent.timeouts);
  $('timeouts').replaceChildren(...teams.map(t=>bar(t.name,'Tiempos muertos registrados',t.stats.timeouts,timeoutMax)));
+ const mvpCard=el('div',undefined,'kpi mvp-card');mvpCard.id='match-mvp';
+ mvpCard.append(el('span',s.matches===1?'MVP del partido':'MVP de la selección','label'));
+ if(s.mvp){mvpCard.append(el('strong',s.mvp.players.join(' / ')),el('p',`${fmt(s.mvp.points)} puntos · ${fmt(s.mvp.shooting_percent)} % de acierto · ${fmt(s.mvp.fouls)} faltas`),el('p',`Valoración: ${fmt(s.mvp.score)}${s.mvp.players.length>1?' · MVP compartido':''}`));}
+ else mvpCard.append(el('strong','—'),el('p','Sin tiros registrados para valorar al MVP.'));
+ const criterion=el('details'),criterionTitle=el('summary','Cómo se calcula');criterion.append(criterionTitle,el('p','Puntos + tiros acertados − tiros fallados − faltas. Incluye TL, T2 y T3. Desempate: mayor acierto, más puntos y menos faltas. Valoración orientativa del MVP Cervelló según las acciones importadas.'));mvpCard.append(criterion);$('team-kpis').append(mvpCard);
  $('period-legend').replaceChildren(...teams.map(t=>el('span',t.name,t.own?'legend-team':'legend-opponent')));
  const pmax=Math.max(1,...s.periods.flatMap(p=>[p.team_points,p.opponent_points||0]));
  $('periods').replaceChildren(...s.periods.map(p=>{const group=el('div',undefined,'period-group'),bars=el('div',undefined,'period-bars');
