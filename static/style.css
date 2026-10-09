@@ -16,3 +16,7 @@
 #team-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}#team-kpis .kpi{min-width:0}.mvp-card strong{font-size:19px;letter-spacing:0;overflow-wrap:anywhere;margin:10px 0}.mvp-card details{font-size:11px;color:var(--muted);margin-top:10px}.mvp-card summary{cursor:pointer;color:var(--blue)}@media(max-width:1150px){#team-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:750px){#team-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .sidebar-toggle{flex-shrink:0;border:1px solid var(--line);background:white;color:var(--navy);border-radius:7px;width:38px;height:38px;font-size:20px}.top{gap:14px}.top>span:first-of-type{margin-right:auto}.sidebar-collapsed .sidebar{display:none}.sidebar-collapsed main{margin-left:0;max-width:none;width:100%}.sidebar-toggle:hover{background:#eaf0fa}.sidebar-toggle:focus-visible{outline:2px solid var(--blue)}
+
+#team-kpis .card-title{display:flex;align-items:center;gap:10px;line-height:1.35;margin-bottom:12px}.card-emblem{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:36px;height:36px;border-radius:11px;font-size:21px;background:#eaf0fa}.emblem-score{background:#eaf0fa}.emblem-shots{background:#edf7f3}.emblem-fouls{background:#fff1ed}.emblem-timeouts{background:#f0edfa}.emblem-mvp{background:#fff5d8}
+
+.card-emblem::before{content:attr(data-icon)}

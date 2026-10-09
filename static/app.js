@@ -11,6 +11,7 @@ setSidebar(savedSidebar);
 $('sidebar-toggle').addEventListener('click',()=>setSidebar(!document.body.classList.contains('sidebar-collapsed')));
 let current='team', selected='', category=null, player='MNL', data=null, pending=null;
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
+function cardTitle(text,icon,kind){const title=el('span',undefined,'label card-title'),emblem=el('span',undefined,'card-emblem emblem-'+kind);emblem.dataset.icon=icon;emblem.setAttribute('aria-hidden','true');title.append(emblem,el('span',text));return title;}
 const fmt=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:1}).format(n);
 const date=s=>s.split('-').reverse().join('/');
 function show(view){current=view;document.querySelectorAll('.view').forEach(e=>e.hidden=e.id!==view);document.querySelectorAll('nav button').forEach(e=>e.classList.toggle('active',e.dataset.view===view));location.hash=view;window.scrollTo({top:0});}
@@ -85,8 +86,8 @@ function render(){const s=data.summary;
  const items=[];
  if(!data.scoreboard)items.unshift(['Partidos importados',s.matches,`${s.partial} con grabación parcial`]);
  kpis('team-kpis',items);
- if(data.scoreboard){const score=data.scoreboard, card=el('div',undefined,'kpi');card.id='match-scoreboard';card.append(el('span',score.complete?'Marcador':'Marcador parcial','label'),el('strong',`${fmt(score.home_points)} – ${fmt(score.away_points)}`),el('p',`${score.home} – ${score.away}`),el('p','Puntos de las acciones importadas'));$('team-kpis').prepend(card);}
- const shots=el('div',undefined,'kpi');shots.id='team-shooting';shots.append(el('span','Tiros registrados','label'));
+ if(data.scoreboard){const score=data.scoreboard, card=el('div',undefined,'kpi');card.id='match-scoreboard';card.append(cardTitle(score.complete?'Marcador':'Marcador parcial','🏀','score'),el('strong',`${fmt(score.home_points)} – ${fmt(score.away_points)}`),el('p',`${score.home} – ${score.away}`),el('p','Puntos de las acciones importadas'));$('team-kpis').prepend(card);}
+ const shots=el('div',undefined,'kpi');shots.id='team-shooting';shots.append(cardTitle('Tiros registrados','🎯','shots'));
  for(const [n,label] of [[1,'Tiros libres'],[2,'Tiros de 2'],[3,'Triples']]){const row=el('p',label+': ');row.append(el('b',`${s.team['made'+n]}/${s.team['attempts'+n]}`));shots.append(row);}
  shots.append(el('p','Aciertos / intentos registrados'));$('team-kpis').append(shots);
  const max=Math.max(1,...s.players.map(p=>p.points));$('ranking').replaceChildren(...s.players.map(p=>bar(p.name,`Dorsal ${p.number??'—'}`,p.points,max,p.number===12)));
@@ -95,12 +96,12 @@ function render(){const s=data.summary;
  const ownFirst=!data.scoreboard||normalizeTeam(data.scoreboard.home)===normalizeTeam(data.selected_team);
  const teams=[{name:'MVP Cervelló',stats:s.team,own:true},{name:rival,stats:s.opponent,own:false}];
  if(!ownFirst)teams.reverse();
- const fouls=el('div',undefined,'kpi');fouls.id='team-fouls';fouls.append(el('span','Faltas personales','label'),el('strong',teams.map(t=>fmt(t.stats.fouls)).join(' – ')),el('p',teams.map(t=>t.name).join(' – ')),el('p','Faltas de las acciones importadas'));$('team-kpis').append(fouls);
- const timeoutCard=el('div',undefined,'kpi timeout-card');timeoutCard.append(el('span','Tiempos muertos solicitados','label'));const timeoutChart=el('div');timeoutChart.id='timeouts';timeoutCard.append(timeoutChart);$('team-kpis').append(timeoutCard);
+ const fouls=el('div',undefined,'kpi');fouls.id='team-fouls';fouls.append(cardTitle('Faltas personales','🚩','fouls'),el('strong',teams.map(t=>fmt(t.stats.fouls)).join(' – ')),el('p',teams.map(t=>t.name).join(' – ')),el('p','Faltas de las acciones importadas'));$('team-kpis').append(fouls);
+ const timeoutCard=el('div',undefined,'kpi timeout-card');timeoutCard.append(cardTitle('Tiempos muertos solicitados','⏱️','timeouts'));const timeoutChart=el('div');timeoutChart.id='timeouts';timeoutCard.append(timeoutChart);$('team-kpis').append(timeoutCard);
  const timeoutMax=Math.max(1,s.team.timeouts,s.opponent.timeouts);
  $('timeouts').replaceChildren(...teams.map(t=>bar(t.name,'Tiempos muertos registrados',t.stats.timeouts,timeoutMax)));
  const mvpCard=el('div',undefined,'kpi mvp-card');mvpCard.id='match-mvp';
- mvpCard.append(el('span',s.matches===1?'MVP del partido':'MVP de la selección','label'));
+ mvpCard.append(cardTitle(s.matches===1?'MVP del partido':'MVP de la selección','🏆','mvp'));
  if(s.mvp){mvpCard.append(el('strong',s.mvp.players.join(' / ')),el('p',`${fmt(s.mvp.points)} puntos · ${fmt(s.mvp.shooting_percent)} % de acierto · ${fmt(s.mvp.fouls)} faltas`),el('p',`Valoración: ${fmt(s.mvp.score)}${s.mvp.players.length>1?' · MVP compartido':''}`));}
  else mvpCard.append(el('strong','—'),el('p','Sin tiros registrados para valorar al MVP.'));
  const criterion=el('details'),criterionTitle=el('summary','Cómo se calcula');criterion.append(criterionTitle,el('p','Puntos + tiros acertados − tiros fallados − faltas. Incluye TL, T2 y T3. Desempate: mayor acierto, más puntos y menos faltas. Valoración orientativa del MVP Cervelló según las acciones importadas.'));mvpCard.append(criterion);$('team-kpis').append(mvpCard);
