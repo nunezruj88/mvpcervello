@@ -2,14 +2,14 @@
 <html lang="es">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MVP Cervelló · Estadísticas</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
 <body>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <a class="brand" href="/"><span class="ball">◉</span><span>MVP<span class="brand-sub">CERVELLÓ</span></span></a>
   <p class="nav-label">CUADERNO DE EQUIPO</p>
   <nav aria-label="Secciones"><button data-view="team" class="active">◫ <span>Estadísticas del equipo</span></button><button data-view="player">◎ <span>Estadísticas del jugador</span></button><button data-view="upload">↑ <span>Cargar partido</span></button></nav>
   <div class="side-bottom"><span class="status-dot"></span> Datos guardados en el servidor<p>Cada jugada cuenta.</p></div>
 </aside>
 <main>
-  <header class="top"><span>MVP Cervelló <span class="muted">/ Seguimiento de partidos</span></span><span class="season">BALONCESTO</span></header>
+  <header class="top"><button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="Plegar panel izquierdo" title="Plegar panel izquierdo">☰</button><span>MVP Cervelló <span class="muted">/ Seguimiento de partidos</span></span><span class="season">BALONCESTO</span></header>
   <div class="context-selectors"><label class="select-label">JUGADOR<select id="player-select" aria-label="Jugador"></select></label><label class="select-label">CATEGORÍA<select id="category-select" aria-label="Categoría"></select></label><label class="select-label">COMPETICIÓN / PARTIDO<select id="team-match" aria-label="Competición y partido"></select></label></div>
   <div id="notice" role="status" hidden></div>
   <section id="team" class="view">

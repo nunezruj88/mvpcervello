@@ -1,5 +1,14 @@
 'use strict';
 const $=id=>document.getElementById(id);
+function setSidebar(collapsed){
+ document.body.classList.toggle('sidebar-collapsed',collapsed);
+ const toggle=$('sidebar-toggle'),label=collapsed?'Desplegar panel izquierdo':'Plegar panel izquierdo';
+ toggle.setAttribute('aria-expanded',String(!collapsed));toggle.setAttribute('aria-label',label);toggle.title=label;
+ try{localStorage.setItem('mvp-sidebar-collapsed',String(collapsed));}catch{}
+}
+let savedSidebar=false;try{savedSidebar=localStorage.getItem('mvp-sidebar-collapsed')==='true';}catch{}
+setSidebar(savedSidebar);
+$('sidebar-toggle').addEventListener('click',()=>setSidebar(!document.body.classList.contains('sidebar-collapsed')));
 let current='team', selected='', category=null, player='MNL', data=null, pending=null;
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 const fmt=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:1}).format(n);
