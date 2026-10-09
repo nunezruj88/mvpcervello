@@ -107,6 +107,12 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.equal(await page.locator('#match-mvp .label').textContent(),'MVP de la selección');
   assert.ok((await page.locator('#team-kpis').textContent()).includes('Partidos importados'));
   assert.ok((await page.locator('#export-team').getAttribute('href')).includes('competition_date=2026-09-01'));
+  assert.equal(await page.locator('#competition-charts').isVisible(),true);
+  assert.equal(await page.locator('#match-charts').isVisible(),false);
+  assert.equal(await page.locator('#team-kpis').isVisible(),false);
+  assert.equal(await page.locator('#competition-points .period-group').count(),2);
+  assert.equal(await page.locator('#competition-fouls .period-group').count(),2);
+  assert.equal(await page.locator('#competition-mvps .competition-mvp').count(),2);
   await page.selectOption('#player-select','ELN');
   await page.waitForFunction(()=>document.querySelector('#focus-name').textContent==='E.L.N.' && document.querySelector('#player-kpis strong').textContent==='2');
   assert.equal(await page.locator('#team-match').inputValue(),competition);
