@@ -196,7 +196,16 @@ def summarize(matches, team=TEAM, player='MNL'):
     for m in matches:
         es = [e for e in events if e['match_id'] == m['id']]
         fs = [e for e in focus if e['match_id'] == m['id']]
-        trend.append(dict(id=m['id'], date=m['date'], opponent=m['away'] if norm(m['home']) == norm(team) else m['home'],
+        opponent = m['away'] if norm(m['home']) == norm(team) else m['home']
+        rival_stats = event_stats([e for e in m['events'] if norm(e['team']) == norm(opponent)])
+        match_players = defaultdict(list)
+        for e in es:
+            if e['player'] and player_key(e['player']) != 'EQUIPO':
+                match_players[player_key(e['player'])].append(e)
+        match_mvp = select_mvp([dict(name=rows[0]['player'], **event_stats(rows)) for rows in match_players.values()])
+        trend.append(dict(team_fouls=event_stats(es)['fouls'], opponent_fouls=rival_stats['fouls'],
+                          opponent_points=rival_stats['points'], mvp=match_mvp,
+                          id=m['id'], date=m['date'], opponent=m['away'] if norm(m['home']) == norm(team) else m['home'],
                           complete=m['complete'], team_points=sum(e['points'] for e in es),
                           focus_points=sum(e['points'] for e in fs)))
     periods = []
