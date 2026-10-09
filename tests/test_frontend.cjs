@@ -135,6 +135,15 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.waitForFunction(()=>document.querySelector('#player-select').options.length===2);
   assert.deepEqual(await page.locator('#player-select option').allTextContents(),['E.L.N.','M.N.L.']);
   assert.ok(!(await page.locator('#category-select option').allTextContents()).includes('Junior'));
+  await page.click('#sidebar-toggle');
+  assert.equal(await page.locator('#sidebar').isVisible(),false);
+  assert.equal(await page.locator('#sidebar-toggle').getAttribute('aria-expanded'),'false');
+  assert.equal(await page.locator('main').evaluate(e=>getComputedStyle(e).marginLeft),'0px');
+  await page.reload();
+  assert.equal(await page.locator('#sidebar').isVisible(),false);
+  await page.click('#sidebar-toggle');
+  assert.equal(await page.locator('#sidebar').isVisible(),true);
+  assert.equal(await page.locator('#sidebar-toggle').getAttribute('aria-expanded'),'true');
   assert.deepEqual(errors,[]);
   console.log('OK: selectors, filters, export, import, competition totals and scoreboard');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{
