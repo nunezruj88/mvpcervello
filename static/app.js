@@ -82,7 +82,7 @@ function render(){const s=data.summary;
  $('focus-team').textContent=data.selected_team+' · '+(category||'Sin categoría');
  $('focus-number').textContent=stats?.number??'—';$('focus-actions-title').textContent='Acciones de '+focus.name;
  for(const id of ['team-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...matchOptions(data.matches));select.value=selected;select.disabled=!data.matches.length;}
- coverage('team-coverage',s);$('team-empty').hidden=!!s.matches;$('team-content').hidden=!s.matches;
+ $('team-empty').hidden=!!s.matches;$('team-content').hidden=!s.matches;
  const items=[];
  if(!data.scoreboard)items.unshift(['Partidos importados',s.matches,`${s.partial} con grabación parcial`]);
  kpis('team-kpis',items);
