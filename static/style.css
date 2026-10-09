@@ -20,3 +20,5 @@
 #team-kpis .card-title{display:flex;align-items:center;gap:10px;line-height:1.35;margin-bottom:12px}.card-emblem{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:36px;height:36px;border-radius:11px;font-size:21px;background:#eaf0fa}.emblem-score{background:#eaf0fa}.emblem-shots{background:#edf7f3}.emblem-fouls{background:#fff1ed}.emblem-timeouts{background:#f0edfa}.emblem-mvp{background:#fff5d8}
 
 .card-emblem::before{content:attr(data-icon)}
+
+.competition-columns{height:280px}.competition-columns .period-group{min-width:110px;gap:4px}.competition-columns .period-group>span{overflow-wrap:anywhere}.partial-label{color:#846521}.mvp-timeline{display:flex;gap:16px;overflow-x:auto;padding-bottom:10px}.competition-mvp{flex:1;min-width:220px;border:1px solid var(--line);border-radius:10px;padding:16px}.competition-mvp .card-title{display:flex;align-items:center;gap:10px;font-weight:700}.competition-mvp p{font-size:12px;color:var(--muted)}

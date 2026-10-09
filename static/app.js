@@ -74,6 +74,22 @@ function renderFocus(){const s=data.summary, f=s.focus;coverage('player-coverage
  const term=$('action-search').value.trim().toLowerCase();const rows=s.focus_events.filter(e=>(e.action+' '+e.clock+' '+e.period+' '+e.opponent).toLowerCase().includes(term));
  table($('focus-table'),['Fecha','Rival','Período','Tiempo restante','Acción','Puntos'],rows.map(e=>[date(e.date),e.opponent,e.period,e.clock,e.action,e.points]));
 }
+function renderCompetition(){
+ const active=selected.startsWith('competition:');
+ $('team-kpis').hidden=active;$('match-charts').hidden=active;$('competition-charts').hidden=!active;
+ if(!active)return;
+ const trend=[...data.summary.trend].sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+ for(const [id,own,rival,unit] of [['competition-points','team_points','opponent_points','puntos'],['competition-fouls','team_fouls','opponent_fouls','faltas']]){
+  const max=Math.max(1,...trend.flatMap(m=>[m[own],m[rival]]));
+  $(id).replaceChildren(...trend.map(m=>{const group=el('div',undefined,'period-group'),bars=el('div',undefined,'period-bars');
+   for(const [value,name,cls] of [[m[own],'MVP Cervelló',''],[m[rival],m.opponent,'opponent']]){const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar '+cls);b.style.height=value/max*150+'px';c.title=`${date(m.date)} · ${name}: ${value} ${unit}`;c.append(el('strong',fmt(value)),b);bars.append(c);}
+   group.append(bars,el('span',date(m.date)),el('span',m.opponent),el('span',m.complete?'':'Parcial','partial-label'));return group;
+  }));
+ }
+ $('competition-mvps').replaceChildren(...trend.map(m=>{const card=el('div',undefined,'competition-mvp');card.append(cardTitle(date(m.date),'🏆','mvp'),el('p',m.opponent+(m.complete?'':' · Parcial')),el('h3',m.mvp?m.mvp.players.join(' / '):'Sin MVP disponible'));
+  if(m.mvp)card.append(el('p',`${fmt(m.mvp.points)} puntos · ${fmt(m.mvp.shooting_percent)} % de acierto · ${fmt(m.mvp.fouls)} faltas`));return card;
+ }));
+}
 function render(){const s=data.summary;
  $('category-select').replaceChildren(...data.categories.map(c=>new Option(c||'Sin categoría',c)));$('category-select').value=category;
  $('player-select').replaceChildren(...data.players.map(p=>new Option(p.name,p.id)));$('player-select').value=player;$('player-select').disabled=!data.players.length;$('category-select').disabled=!data.categories.length;
@@ -111,6 +127,7 @@ function render(){const s=data.summary;
   for(const [points,name,cls] of teams.map(t=>[t.own?p.team_points:(p.opponent_points||0),t.name,t.own?'':'opponent'])){const c=el('div',undefined,'column'),b=el('div',undefined,'col-bar '+cls);b.style.height=(points/pmax*150)+'px';c.title=`${p.period} · ${name}: ${points} puntos registrados`;c.append(el('strong',fmt(points)),b);bars.append(c);}
   group.append(bars,el('span',p.period));return group;
  }));
+ renderCompetition();
  renderPlayers();
  $('export-team').href='/api/export?'+selectionQuery();
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
