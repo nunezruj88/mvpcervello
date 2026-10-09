@@ -135,7 +135,9 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await page.waitForFunction(()=>document.querySelector('#player-select').options.length===2);
   assert.deepEqual(await page.locator('#player-select option').allTextContents(),['E.L.N.','M.N.L.']);
   assert.ok(!(await page.locator('#category-select option').allTextContents()).includes('Junior'));
+  await page.setViewportSize({width:2400,height:1000});
   await page.click('#sidebar-toggle');
+  assert.equal(await page.locator('main').evaluate(e=>e.getBoundingClientRect().width),2400);
   assert.equal(await page.locator('#sidebar').isVisible(),false);
   assert.equal(await page.locator('#sidebar-toggle').getAttribute('aria-expanded'),'false');
   assert.equal(await page.locator('main').evaluate(e=>getComputedStyle(e).marginLeft),'0px');
