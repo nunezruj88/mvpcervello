@@ -15,9 +15,13 @@ class Tests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         app.DB = Path(self.temp.name) / 'test.sqlite3'
+        self.old_archive_dir = app.ARCHIVE_DIR
+        app.ARCHIVE_DIR = Path(self.temp.name) / 'partidos'
         self.data = EXAMPLE.read_bytes()
 
-    def tearDown(self): self.temp.cleanup()
+    def tearDown(self):
+        app.ARCHIVE_DIR = self.old_archive_dir
+        self.temp.cleanup()
 
     def call(self,path,method='GET',payload=None,origin=None,query=''):
         body=json.dumps(payload or {}).encode()

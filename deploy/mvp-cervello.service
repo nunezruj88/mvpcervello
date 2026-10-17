@@ -7,6 +7,8 @@ User=mvp-cervello
 Group=mvp-cervello
 WorkingDirectory=/var/www/mvp-cervello
 Environment=MVP_DB=/var/lib/mvp-cervello/mvp.sqlite3
+Environment=MVP_IMPORT_DIR=/var/www/mvp-cervello/partidos
+ReadWritePaths=/var/www/mvp-cervello/partidos
 ExecStart=/var/www/mvp-cervello/.venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8092 --timeout 90 --access-logfile - app:application
 Restart=on-failure
 RestartSec=5

@@ -5,6 +5,8 @@ import io
 import json
 import os
 import sqlite3
+import re
+import tempfile
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from wsgiref.simple_server import make_server
@@ -15,6 +17,34 @@ from stats import competition_matches, scoreboard
 
 ROOT = Path(__file__).resolve().parent
 DB = Path(os.environ.get('MVP_DB', ROOT / 'data' / 'mvp.sqlite3'))
+ARCHIVE_DIR = Path(os.environ.get('MVP_IMPORT_DIR', ROOT / 'partidos'))
+
+def archive_upload(name, data, match):
+    """Keep the original bytes in a private, unique file; never trust a path."""
+    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    stem = re.sub(r'[^a-zA-Z0-9_-]+', '_', Path(name).stem)[:80] or 'partido'
+    fd, filename = tempfile.mkstemp(prefix=f"{match['date']}_{stem}_", suffix=Path(name).suffix.lower(), dir=ARCHIVE_DIR)
+    path = Path(filename)
+    try:
+        with os.fdopen(fd, 'wb') as out:
+            out.write(data)
+            out.flush()
+            os.fsync(out.fileno())
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+    return path
+
+@contextmanager
+def import_storage():
+    archived = []
+    try:
+        with connect() as con:
+            yield con, archived
+    except BaseException:
+        for path in archived:
+            path.unlink(missing_ok=True)
+        raise
 
 @contextmanager
 def connect():
@@ -90,7 +120,9 @@ def application(env, start_response):
             try: data = base64.b64decode(payload.get('data',''), validate=True)
             except (ValueError, TypeError): raise ImportError('Archivo inválido.')
             match = parse(name, data, payload.get('complete',False))
-            with connect() as con:
+            with import_storage() as (con, archived):
+                if not payload.get('preview', False):
+                    con.execute('BEGIN IMMEDIATE')
                 existing = con.execute('SELECT body FROM matches WHERE id=?',(match['id'],)).fetchone()
                 legacy = None
                 if not existing and match.get('legacy_id') != match['id']:
@@ -103,6 +135,11 @@ def application(env, start_response):
                                       events=match['events'][:100]))
                 if existing and not payload.get('replace',False):
                     return reply({'error':'Este partido ya existe. Activa reemplazar para actualizarlo.'}, '409 Conflict')
+                try:
+                    archived.append(archive_upload(name, data, match))
+                except OSError:
+                    return reply({'error':'No se ha podido guardar la copia del fichero. Revisa permisos y espacio en la carpeta partidos. La importación no se ha guardado.'}, '500 Internal Server Error')
+                match['archived_filename'] = archived[-1].name
                 # Transactional replacement, never appends a second copy of this match.
                 if legacy:
                     con.execute('DELETE FROM matches WHERE id=?', (legacy,))

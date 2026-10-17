@@ -10,7 +10,7 @@ Web para un LXC: **http://10.8.1.106:8083**. Código independiente en `/var/www/
 - Seguir a M.N.L. y E.L.N. en las distintas categorías del MVP Cervelló, seleccionando cada categoría por separado. Se identifica por el nombre normalizado, nunca solo por el dorsal; M.N.L. y MNL se reconocen como el mismo nombre. Usa un nombre consistente y distinto para cada persona en los archivos. No se unen automáticamente alias diferentes ni se distinguen dos personas con el mismo nombre. Los dorsales pueden variar entre partidos.
 - Guardar los partidos en el servidor y exportar sus acciones a CSV. Los datos persisten entre reinicios y son compartidos por todos los usuarios autorizados.
 
-No convierte vídeos automáticamente. Primero se extrae el vídeo en el chat; después se sube el archivo resultante. Incluye un ejemplo con nombres ficticios en `examples/`, **no cargado automáticamente**. Los archivos reales y la base de datos permanecen fuera del repositorio.
+No convierte vídeos automáticamente. Primero se extrae el vídeo en el chat; después se sube el archivo resultante. Incluye un ejemplo con nombres ficticios en `examples/`, **no cargado automáticamente**. La base de datos permanece fuera del repositorio. Los ficheros importados se conservan en la carpeta privada `partidos/`, excluida de Git.
 
 ## Cobertura y cálculos
 
@@ -58,6 +58,7 @@ test ! -e /etc/nginx/sites-available/mvp-cervello || { echo 'El sitio ya existe.
 test ! -e /etc/nginx/sites-enabled/mvp-cervello || { echo 'El sitio ya está activado.'; exit 1; }
 useradd --system --home /var/lib/mvp-cervello --shell /usr/sbin/nologin mvp-cervello
 git clone --branch main https://github.com/nunezruj88/mvpcervello.git /var/www/mvp-cervello
+install -d -o mvp-cervello -g mvp-cervello -m 700 /var/www/mvp-cervello/partidos
 python3 -m venv /var/www/mvp-cervello/.venv
 /var/www/mvp-cervello/.venv/bin/pip install -r /var/www/mvp-cervello/requirements.txt
 cp /var/www/mvp-cervello/deploy/mvp-cervello.service /etc/systemd/system/mvp-cervello.service
@@ -135,3 +136,27 @@ Se calculan al consultar los datos ya guardados, sin migrar SQLite ni reimportar
 - Una entrada abierta se cierra a cero solo cuando consta el fin del período, existe un período posterior o el partido está marcado como completo. Si falta ese límite no se inventa una salida.
 - Los intervalos cerrados y confirmados se conservan aunque otras partes no se puedan calcular. Se muestran como `MM:SS (incompletos)` si el archivo es parcial, faltan períodos, hay cambios ausentes o duplicados, o relojes inconsistentes; `— (incompletos)` indica que no hay tiempo confirmado. La explicación aparece al situar el cursor sobre el valor.
 - Los nombres se normalizan igual que en las estadísticas; no se identifica al jugador solamente por el dorsal. Una selección de varios partidos suma sus intervalos confirmados e indica si alguno tiene datos incompletos.
+
+## Copias de los ficheros importados
+
+Al confirmar y guardar una importación válida se conserva una copia exacta del CSV o Excel original en `/var/www/mvp-cervello/partidos`. Revisar un archivo, rechazarlo por errores o intentar duplicarlo sin confirmar el reemplazo no crea copias. Cada importación confirmada recibe un nombre único con fecha del partido, nombre saneado y sufijo aleatorio. Reemplazar los datos del partido conserva las versiones originales anteriores.
+
+Los permisos de la carpeta son `700` y los de cada archivo `600`, bajo el usuario del servicio. Los archivos no se sirven por HTTP y `partidos/` está excluido de Git. Guarda también esta carpeta en tus copias de seguridad: la copia de SQLite por sí sola no incluye los originales. Para otra ubicación usa `MVP_IMPORT_DIR`, ajustando también permisos y `ReadWritePaths` del servicio.
+
+Si no se puede guardar la copia por falta de permisos o espacio, se rechaza la importación y se mantienen los datos anteriores. Si falla la escritura o confirmación de SQLite después de crear la copia, se retira esa nueva copia. Los partidos importados antes de esta actualización no tienen copia original; reimporta sus ficheros con reemplazo para archivarlos.
+
+### Activar en una instalación existente
+
+Como `root`, después de descargar los cambios:
+
+```sh
+cd /var/www/mvp-cervello
+git pull --ff-only origin main
+install -d -o mvp-cervello -g mvp-cervello -m 700 /var/www/mvp-cervello/partidos
+cp deploy/mvp-cervello.service /etc/systemd/system/mvp-cervello.service
+systemctl daemon-reload
+systemctl restart mvp-cervello
+curl --fail http://127.0.0.1:8092/health
+```
+
+El servicio utiliza `ProtectSystem=strict`; la nueva directiva `ReadWritePaths` permite escribir únicamente en esta carpeta adicional. No es necesario dar permisos de escritura a todo el proyecto. Si personalizaste el servicio, incorpora solo `Environment=MVP_IMPORT_DIR=/var/www/mvp-cervello/partidos` y `ReadWritePaths=/var/www/mvp-cervello/partidos` a tu configuración antes de recargarla.
