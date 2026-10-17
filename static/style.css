@@ -22,3 +22,8 @@
 .card-emblem::before{content:attr(data-icon)}
 
 .competition-columns{height:280px}.competition-columns .period-group{min-width:110px;gap:4px}.competition-columns .period-group>span{overflow-wrap:anywhere}.partial-label{color:#846521}.mvp-timeline{display:flex;gap:16px;overflow-x:auto;padding-bottom:10px}.competition-mvp{flex:1;min-width:220px;border:1px solid var(--line);border-radius:10px;padding:16px}.competition-mvp .card-title{display:flex;align-items:center;gap:10px;font-weight:700}.competition-mvp p{font-size:12px;color:var(--muted)}
+
+#player-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+#player-kpis .label{font-weight:700}
+@media(max-width:1150px){#player-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:750px){#player-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}

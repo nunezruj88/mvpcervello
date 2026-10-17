@@ -69,9 +69,10 @@ function matchOptions(matches){
   return group;
  });
 }
-function renderFocus(){const s=data.summary, f=s.focus;coverage('player-coverage',s);kpis('player-kpis',[
- ['Puntos registrados',f.points,'De las acciones importadas'],['Canastas de 2',f.made2,`${f.missed2} fallos registrados`],['Faltas personales',f.fouls,'Una falta por acción'],['Acciones',f.events,'Del jugador en la selección']]);
- const minutes=el('div',undefined,'kpi');const value=el('strong');value.append(playingTimeCell(f));minutes.append(el('span','Minutos registrados','label'),value,el('p','Incluye P1 cuando hay una entrada inicial registrada'));$('player-kpis').append(minutes);
+function renderFocus(){const s=data.summary, f=s.focus;coverage('player-coverage',s);$('player-kpis').replaceChildren(...[
+ ['Puntos registrados',f.points],['Tiros libres',f.made1],['Tiros de 2',f.made2],
+ ['Tiros de 3',f.made3],['Faltas personales',f.fouls]
+ ].map(([title,total])=>{const card=el('div',undefined,'kpi');card.append(el('b',title,'label'),el('strong',fmt(total)));return card;}));
  $('shooting').replaceChildren(...[1,2,3].map(n=>{const box=el('div',undefined,'shot'),text=el('div');text.append(el('h3',n===1?'Tiros libres':`Tiros de ${n}`),el('p',`${f['made'+n]} ${f['made'+n]===1?'acierto':'aciertos'} / ${f['attempts'+n]} ${f['attempts'+n]===1?'intento registrado':'intentos registrados'}`));box.append(text,el('strong',f['percent'+n]===null?'—':fmt(f['percent'+n])+' %'));const track=el('div',undefined,'bar-track'),fill=el('div',undefined,'bar-fill');fill.style.width=(f['percent'+n]||0)+'%';track.append(fill);box.append(track);return box;}));
  const max=Math.max(1,...s.trend.map(t=>t.focus_points));$('trend').replaceChildren(...s.trend.map(t=>bar(date(t.date),`${t.opponent} · ${t.complete?'Completo':'Parcial'}`,t.focus_points,max,true)));if(!s.trend.length)$('trend').append(el('p','Importa un partido para ver su evolución.','muted'));
  const term=$('action-search').value.trim().toLowerCase();const rows=s.focus_events.filter(e=>(e.action+' '+e.clock+' '+e.period+' '+e.opponent).toLowerCase().includes(term));
