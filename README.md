@@ -123,3 +123,15 @@ Dentro de cada grupo puedes seleccionar «Toda la competición» para ver las es
 ## Selección de datos
 
 Los tres selectores superiores siguen la relación Jugador → Categoría → Competición → Partido. Jugador ofrece únicamente M.N.L. y E.L.N. cuando tienen registros del MVP Cervelló. Categoría ofrece únicamente las categorías con registros de ese jugador. Competición es el agrupador del selector Partido y contiene únicamente sus partidos en la categoría elegida. Puede elegirse toda una competición o un partido concreto. La selección se comparte entre las vistas del equipo y del jugador; la vista del equipo muestra a todos los jugadores de los partidos seleccionados. Si una selección deja de ser válida al cambiar un filtro, se ajusta automáticamente. Los datos existentes se conservan: no hace falta borrar ni migrar la base de datos.
+
+
+## Minutos jugados
+
+Se calculan al consultar los datos ya guardados, sin migrar SQLite ni reimportar si las acciones ya están presentes. Se muestran en la tabla de jugadores y en el seguimiento individual.
+
+- `Entra al camp` y `Surt del camp` delimitan intervalos por jugador y período; también se procesan las entradas iniciales de P1. Los relojes representan tiempo restante.
+- La duración usa `period_seconds` del partido (obtenida de la primera fila al importar); en datos antiguos se usa el reloj de esa primera fila. El fichero debe empezar con la duración real del período: no se fija una duración por categoría ni se incluyen descansos.
+- Una entrada al inicio confirma al titular. Una salida aislada no permite suponer desde cuándo estaba jugando. El estado conocido se mantiene entre períodos consecutivos; una entrada a la duración inicial puede reafirmarlo.
+- Una entrada abierta se cierra a cero solo cuando consta el fin del período, existe un período posterior o el partido está marcado como completo. Si falta ese límite no se inventa una salida.
+- Los intervalos cerrados y confirmados se conservan aunque otras partes no se puedan calcular. Se muestran como `MM:SS (incompletos)` si el archivo es parcial, faltan períodos, hay cambios ausentes o duplicados, o relojes inconsistentes; `— (incompletos)` indica que no hay tiempo confirmado. La explicación aparece al situar el cursor sobre el valor.
+- Los nombres se normalizan igual que en las estadísticas; no se identifica al jugador solamente por el dorsal. Una selección de varios partidos suma sus intervalos confirmados e indica si alguno tiene datos incompletos.

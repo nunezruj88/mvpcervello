@@ -86,7 +86,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(period['team_points'],0)
         self.assertEqual(period['opponent_points'],3)
 
-    def test_playing_time_excludes_p1_and_crosses_periods(self):
+    def test_playing_time_includes_recorded_p1_and_crosses_periods(self):
         m=parse(EXAMPLE.name,self.data)
         m['period_seconds']=360
         template=m['events'][2]
@@ -95,11 +95,11 @@ class Tests(unittest.TestCase):
         m['events']=[event('P1','06:00','Entra al camp'),event('P1','00:00','Surt del camp'),
                      event('P2','05:00','Entra al camp'),event('P2','03:00','Surt del camp'),
                      event('P2','01:00','Entra al camp'),event('P3','04:00','Surt del camp')]
-        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),300)
-        self.assertEqual(playing_seconds([m,m],'MVP CERVELLÓ','MNL'),600)
-        self.assertEqual(summarize([m])['players'][0]['playing_seconds'],300)
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),660)
+        self.assertEqual(playing_seconds([m,m],'MVP CERVELLÓ','MNL'),1320)
+        self.assertEqual(summarize([m])['players'][0]['playing_seconds'],660)
         m['events']=[event('P2','04:00','Surt del camp')]
-        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),120)
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),None)
         m['events']=[event('P2','04:00','Entra al camp')]
         self.assertIsNone(playing_seconds([m],'MVP CERVELLÓ','MNL'))
         m['events'].append(event('P2','','Final de període'))
@@ -122,12 +122,12 @@ class Tests(unittest.TestCase):
         self.data=(header+rows).encode()
         m=parse('duration.csv',self.data)
         self.assertEqual(m['period_seconds'],600)
-        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),180)
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),780)
         del m['period_seconds']
-        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),180)
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','MNL'),780)
         self.assertEqual(self.call('/api/import','POST',self.payload())['status'],'201 Created')
         self.assertEqual(app.matches()[0]['period_seconds'],600)
-        self.assertEqual(self.call('/api/data')['json']['summary']['players'][0]['playing_seconds'],180)
+        self.assertEqual(self.call('/api/data')['json']['summary']['players'][0]['playing_seconds'],780)
         import csv
         from datetime import time
         book=Workbook();sheet=book.active
@@ -146,10 +146,10 @@ class Tests(unittest.TestCase):
                      event('P2','','Final de període',player=''),
                      event('P3','05:41','Entra al camp'),event('P3','04:10','Surt del camp'),
                      event('P4','05:06','Entra al camp'),event('P4','','Final de període',player='')]
-        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','JUGADORPRUEBA'),397)
-        # A P1 entry can establish the P2 starter without counting any P1 time.
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','JUGADORPRUEBA'),633)
+        # A recorded P1 entry contributes its confirmed interval and establishes P2 state.
         m['events']=[event('P1','05:00','Entra al camp'),event('P2','08:00','Surt del camp')]
-        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','JUGADORPRUEBA'),120)
+        self.assertEqual(playing_seconds([m],'MVP CERVELLÓ','JUGADORPRUEBA'),420)
 
     def test_mvp_points_efficiency_fouls_and_ties(self):
         def player(name, made, missed, fouls):
@@ -166,3 +166,4 @@ class Tests(unittest.TestCase):
         self.assertIsNone(select_mvp([player('Sin tiros',0,0,0)]))
 
 if __name__=='__main__':unittest.main()
+

@@ -85,7 +85,7 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.ok((await page.locator('#team-fouls p').first().textContent()).startsWith('CB BEGUES – MVP Cervelló'));
   assert.deepEqual(await page.locator('#period-legend span').allTextContents(),['CB BEGUES','MVP Cervelló']);
   assert.equal(await page.locator('#team-fouls + .timeout-card').count(),1);
-  assert.deepEqual(await page.locator('#players-table th button').allTextContents(),['Jugador ↕','Dorsal ↕','PTS ↓','TL ↕','T2 ↕','T3 ↕','Faltas ↕','Minutos desde P2 ↕']);
+  assert.deepEqual(await page.locator('#players-table th button').allTextContents(),['Jugador ↕','Dorsal ↕','PTS ↓','TL ↕','T2 ↕','T3 ↕','Faltas ↕','Minutos registrados ↕']);
   assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['2','1']);
   assert.ok(!(await page.locator('#players-table').textContent()).includes('EQUIPO'));
   await page.locator('#players-table th').nth(2).locator('button').click();
@@ -130,9 +130,9 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.deepEqual(await page.locator('#periods .column strong').allTextContents(),['4','2','0','0']);
   assert.deepEqual(await page.locator('#period-legend span').allTextContents(),['MVP Cervelló','CB BEGUES']);
   assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['1','2']);
-  assert.deepEqual(await page.locator('#players-table tbody tr td:last-child').allTextContents(),['2:30','3:00']);
+  assert.deepEqual(await page.locator('#players-table tbody tr td:last-child').allTextContents(),['2:30 (incompletos)','3:00 (incompletos)']);
   await page.locator('#players-table th').last().locator('button').click();
-  assert.deepEqual(await page.locator('#players-table tbody tr td:last-child').allTextContents(),['3:00','2:30']);
+  assert.deepEqual(await page.locator('#players-table tbody tr td:last-child').allTextContents(),['3:00 (incompletos)','2:30 (incompletos)']);
   assert.deepEqual(await page.locator('.context-selectors select').evaluateAll(items=>items.map(e=>e.id)),['player-select','category-select','team-match']);
   const isolated=fixture('Junior',2,'Nueva liga','2026-09-01','2026-11-02').toString().replaceAll('M.N.L.','OTRO').replaceAll('E.L.N.','OTRO');
   const isolatedImport=await fetch(base+'/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:'isolated.csv',data:Buffer.from(isolated).toString('base64')})});
@@ -160,3 +160,4 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   await new Promise(resolve=>server.exitCode!==null?resolve():server.once('exit',resolve));
   fs.rmSync(temp,{recursive:true,force:true});
 });
+
