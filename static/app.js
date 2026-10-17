@@ -69,14 +69,36 @@ function matchOptions(matches){
   return group;
  });
 }
+function renderTrend(trend){
+ const container=$('trend'),rows=[...trend].sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+ if(!rows.length){container.replaceChildren(el('p','Importa un partido para ver su evolución.','muted'));return;}
+ const svgNS='http://www.w3.org/2000/svg';
+ const node=(name,attrs={},text)=>{const n=document.createElementNS(svgNS,name);for(const [key,value] of Object.entries(attrs))n.setAttribute(key,String(value));if(text!==undefined)n.textContent=text;return n;};
+ const width=Math.max(400,rows.length*65+65),height=285,left=42,right=20,top=25,bottom=65;
+ const plotW=width-left-right,plotH=height-top-bottom,max=Math.max(1,...rows.map(r=>r.focus_points));
+ const raw=max/4,power=10**Math.floor(Math.log10(raw)),scaled=raw/power,step=(scaled<=1?1:scaled<=2?2:scaled<=5?5:10)*power;
+ const ceiling=Math.max(1,Math.ceil(max/step)*step),tickStep=Math.max(1,step);
+ const svg=node('svg',{viewBox:`0 0 ${width} ${height}`,width,height,role:'img','aria-labelledby':'trend-title trend-description'});
+ svg.append(node('title',{id:'trend-title'},'Evolución: puntos por partido'),node('desc',{id:'trend-description'},rows.map(r=>`${date(r.date)}, ${r.opponent}: ${r.focus_points} puntos${r.complete?'':' (parcial)'}`).join('. ')));
+ for(let value=0;value<=ceiling;value+=tickStep){const y=top+plotH*(1-value/ceiling);svg.append(node('line',{x1:left,y1:y,x2:width-right,y2:y,class:'trend-grid'}),node('text',{x:left-9,y:y+4,'text-anchor':'end',class:'trend-axis'},String(value)));}
+ const points=rows.map((r,i)=>({r,x:left+(rows.length===1?plotW/2:i*plotW/(rows.length-1)),y:top+plotH*(1-r.focus_points/ceiling)}));
+ if(points.length>1)svg.append(node('polyline',{points:points.map(p=>p.x+','+p.y).join(' '),class:'trend-line'}));
+ for(const {r,x,y} of points){
+  const dot=node('circle',{cx:x,cy:y,r:5,class:r.complete?'trend-dot':'trend-dot partial',tabindex:0});
+  dot.append(node('title',{},`${date(r.date)} · ${r.opponent}: ${r.focus_points} puntos · ${r.complete?'Completo':'Parcial'}`));
+  svg.append(dot,node('text',{x,y:y-12,'text-anchor':'middle',class:'trend-value'},String(r.focus_points)),node('text',{x,y:height-bottom+22,'text-anchor':'middle',class:'trend-axis'},date(r.date).slice(0,5)));
+  const label=r.opponent.length>11?r.opponent.slice(0,10)+'…':r.opponent;
+  svg.append(node('text',{x,y:height-bottom+39,'text-anchor':'middle',class:'trend-axis'},label));
+ }
+ container.replaceChildren(svg);
+}
 function renderFocus(){const s=data.summary, f=s.focus;coverage('player-coverage',s);$('player-kpis').replaceChildren(...[
  ['Puntos registrados',f.points],['Tiros libres',f.made1],['Tiros de 2',f.made2],
  ['Tiros de 3',f.made3],['Faltas personales',f.fouls]
  ].map(([title,total])=>{const card=el('div',undefined,'kpi');card.append(el('b',title,'label'),el('strong',fmt(total)));return card;}));
  $('shooting').replaceChildren(...[1,2,3].map(n=>{const box=el('div',undefined,'shot'),text=el('div');text.append(el('h3',n===1?'Tiros libres':`Tiros de ${n}`),el('p',`${f['made'+n]} ${f['made'+n]===1?'acierto':'aciertos'} / ${f['attempts'+n]} ${f['attempts'+n]===1?'intento registrado':'intentos registrados'}`));box.append(text,el('strong',f['percent'+n]===null?'—':fmt(f['percent'+n])+' %'));const track=el('div',undefined,'bar-track'),fill=el('div',undefined,'bar-fill');fill.style.width=(f['percent'+n]||0)+'%';track.append(fill);box.append(track);return box;}));
- const max=Math.max(1,...s.trend.map(t=>t.focus_points));$('trend').replaceChildren(...s.trend.map(t=>bar(date(t.date),`${t.opponent} · ${t.complete?'Completo':'Parcial'}`,t.focus_points,max,true)));if(!s.trend.length)$('trend').append(el('p','Importa un partido para ver su evolución.','muted'));
- const term=$('action-search').value.trim().toLowerCase();const rows=s.focus_events.filter(e=>(e.action+' '+e.clock+' '+e.period+' '+e.opponent).toLowerCase().includes(term));
- table($('focus-table'),['Fecha','Rival','Período','Tiempo restante','Acción','Puntos'],rows.map(e=>[date(e.date),e.opponent,e.period,e.clock,e.action,e.points]));
+ renderTrend(s.trend);
+
 }
 function renderCompetition(){
  const active=selected.startsWith('competition:');
@@ -100,7 +122,7 @@ function render(){const s=data.summary;
  const focus=data.players.find(p=>p.id===player)||{name:'Sin jugadores'}, stats=s.players.find(p=>p.id===player);
  $('focus-heading').textContent='Foco en '+focus.name;$('focus-name').textContent=focus.name;
  $('focus-team').textContent=data.selected_team+' · '+(category||'Sin categoría');
- $('focus-number').textContent=stats?.number??'—';$('focus-actions-title').textContent='Acciones de '+focus.name;
+ $('focus-number').textContent=stats?.number??'—';
  for(const id of ['team-match']){const select=$(id);select.replaceChildren(new Option('Todos los partidos',''),...matchOptions(data.matches));select.value=selected;select.disabled=!data.matches.length;}
  $('team-empty').hidden=!!s.matches;$('team-content').hidden=!s.matches;
  const items=[];
@@ -141,7 +163,7 @@ async function refresh(){try{const query=selectionQuery();query.set('player',pla
 $('category-select').addEventListener('change',async e=>{category=e.target.value;selected='';await refresh();});
 $('player-select').addEventListener('change',async e=>{player=e.target.value;await refresh();});
 for(const id of ['team-match'])$(id).addEventListener('change',async e=>{selected=e.target.value;await refresh();});
-$('action-search').addEventListener('input',()=>{if(data)renderFocus();});
+
 function resetPreview(){$('upload-notice').hidden=true;pending=null;$('preview').hidden=true;$('replace').checked=false;}
 $('file').addEventListener('change',()=>{$('file-label').textContent=$('file').files[0]?.name||'Selecciona o arrastra tu archivo';resetPreview();});
 $('complete').addEventListener('change',resetPreview);
