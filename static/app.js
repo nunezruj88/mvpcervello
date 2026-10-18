@@ -159,12 +159,12 @@ function render(){const s=data.summary;
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
  renderFocus();
 }
-let standingsVersion=0;
+let standingsVersion=0, standingsRefreshing=false;
 function standingsSelection(){
  if(!selected.startsWith('competition:'))return null;
  const [start,name]=JSON.parse(selected.slice(12));
- const normalized=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s*[-–—]\s*/g,'-');
- return start==='2026-10-01'&&normalized==='PRIMERA FASE-NIVEL C-1'?{category:category||'',competition:name,competition_date:start}:null;
+ const normalized=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s*[-–—]\s*/g,'-').replace('NIVELL','NIVEL');
+ return start==='2026-10-01'&&/^PRIMERA FASE-NIVEL C-(?:0?1|10)$/.test(normalized)?{category:category||'',competition:name,competition_date:start}:null;
 }
 function paintStandings(snapshot){
  if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Pulsa Refrescar para obtenerla. No se actualiza automáticamente.';return;}
@@ -173,19 +173,21 @@ function paintStandings(snapshot){
  $('standings-status').textContent=`${snapshot.title} · ${snapshot.group}. Guardada: ${new Date(snapshot.updated_at).toLocaleString('es-ES')}. Actualización exclusivamente manual.`;
 }
 async function loadStandings(){
- const version=++standingsVersion,params=standingsSelection();$('standings-panel').hidden=!params;
- $('standings-table').replaceChildren();if(!params)return;
+ const version=++standingsVersion,params=standingsSelection();$('standings-panel').hidden=false;
+ $('standings-refresh').disabled=!params||standingsRefreshing;
+ $('standings-table').replaceChildren();
+ if(!params){$('standings-status').textContent=selected.startsWith('competition:')?'Esta competición no tiene una clasificación configurada. Selecciona la primera fase de Nivel C correspondiente.':'Selecciona «Toda la competición» para consultar la clasificación guardada. El refresco es manual.';return;}
  $('standings-status').textContent='Leyendo clasificación guardada…';
  try{const result=await api('/api/standings?'+new URLSearchParams(params));if(version===standingsVersion)paintStandings(result.standings);}
  catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
 }
 $('standings-refresh').addEventListener('click',async()=>{
  const params=standingsSelection();if(!params)return;
- const version=standingsVersion,button=$('standings-refresh');button.disabled=true;
+ const version=standingsVersion,button=$('standings-refresh');standingsRefreshing=true;button.disabled=true;
  $('standings-status').textContent='Consultando la web oficial…';
  try{const result=await api('/api/standings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)});if(version===standingsVersion)paintStandings(result.standings);}
  catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
- finally{button.disabled=false;}
+ finally{standingsRefreshing=false;button.disabled=!standingsSelection();}
 });
 async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();await loadStandings();}catch(e){notice(e.message,true);}}
 $('category-select').addEventListener('change',async e=>{category=e.target.value;selected='';await refresh();});

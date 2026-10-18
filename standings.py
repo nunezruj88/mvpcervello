@@ -13,10 +13,10 @@ class StandingsError(Exception):
 def scope(category, competition, start):
     if not all(isinstance(v, str) for v in (category, competition, start)):
         raise StandingsError('Selección de competición inválida.')
-    name = re.sub(r'\s*[-–—]\s*', '-', norm(competition))
-    if start != '2026-10-01' or name != 'PRIMERA FASE-NIVEL C-1':
+    name = re.sub(r'\s*[-–—]\s*', '-', norm(competition)).replace('NIVELL', 'NIVEL')
+    if start != '2026-10-01' or not re.fullmatch(r'PRIMERA FASE-NIVEL C-(?:0?1|10)', name):
         raise StandingsError('Esta competición no tiene una fuente de clasificación configurada.')
-    return [norm(category), start, name]
+    return [norm(category), start, 'PRIMERA FASE-NIVEL C-1']
 
 class ClassificationParser(HTMLParser):
     def __init__(self):

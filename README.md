@@ -164,7 +164,7 @@ El servicio utiliza `ProtectSystem=strict`; la nueva directiva `ReadWritePaths` 
 
 ## Clasificación oficial: refresco exclusivamente manual
 
-En **Estadísticas del equipo**, selecciona **Toda la competición · 01/10/2026 - Primera fase - Nivel C - 1** para ver la clasificación guardada en SQLite. El botón **Refrescar** consulta la fuente oficial y guarda una nueva copia con su fecha de actualización. La primera vez, pulsa el botón para obtenerla. Abrir la página, cambiar de jugador/categoría/partido o reiniciar el servicio **nunca consulta la web externa**. No hay tareas programadas ni temporizadores de actualización.
+En **Estadísticas del equipo**, selecciona **Toda la competición · 01/10/2026 - Primera fase - Nivel C - 1** para ver la clasificación guardada en SQLite. El botón **Refrescar** consulta la fuente oficial y guarda una nueva copia con su fecha de actualización. El botón siempre está visible en la sección del equipo, desactivado y con una explicación cuando no hay una competición compatible seleccionada. Se reconocen las variantes Nivel/Nivell y 1/01/10 para esta asociación. La primera vez, pulsa el botón para obtenerla. Abrir la página, cambiar de jugador/categoría/partido o reiniciar el servicio **nunca consulta la web externa**. No hay tareas programadas ni temporizadores de actualización.
 
 La opción indicada se asocia expresamente a https://www.basquetcatala.cat/competicions/resultats/24222, que la federación identifica como **C.T. Pre-infantil Masculí · Primera fase · Nivel C · Grupo 10**. El nombre importado «Nivel C - 1» se mantiene; la tabla muestra el grupo real de la fuente para evitar confusiones. Otras competiciones necesitan una asociación propia, no reutilizan esta clasificación.
 

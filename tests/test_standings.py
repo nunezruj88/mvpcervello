@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlencode
 import app
-from standings import parse_standings, StandingsError
+from standings import parse_standings, StandingsError, scope
 
 HTML = '''<h2 id="titleCategory">C.t. Pre-infantil Masculí</h2>
 <div>Primera Fase - Nivell C - 10</div>
@@ -43,6 +43,13 @@ class StandingsTests(unittest.TestCase):
         self.assertEqual(rows[1]['team'], 'MVP CERVELLÓ')
         self.assertEqual(rows[1]['points_for'], 155)
         self.assertEqual(rows[1]['points'], 4)
+
+    def test_label_variations_reuse_saved_scope(self):
+        expected = scope('Preinfantil', 'Primera fase - Nivel C - 1', '2026-10-01')
+        for name in ['Primera Fase - Nivell C - 10', 'Primera fase - Nivel C - 01', 'Primera fase – Nivel C – 1']:
+            self.assertEqual(scope('Preinfantil', name, '2026-10-01'), expected)
+        with self.assertRaises(StandingsError):
+            scope('Preinfantil', 'Primera fase - Nivel C - 2', '2026-10-01')
 
     def test_reject_empty_challenge_wrong_category_and_bad_values(self):
         for html in ['Verificació de seguretat', HTML.replace('Pre-infantil', 'Júnior'), HTML.replace('<div>155</div>', '<div>—</div>')]:
