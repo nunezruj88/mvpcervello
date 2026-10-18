@@ -11,6 +11,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from wsgiref.simple_server import make_server
 from contextlib import contextmanager
+from datetime import datetime, timezone
+from standings import scope as standings_scope, fetch_standings, StandingsError
 from importer import parse, ImportError
 from stats import summarize, norm, TEAM, team_matches, team_names, player_names, player_key, category_names, category_matches, TRACKED_PLAYERS, is_team
 from stats import competition_matches, scoreboard
@@ -51,6 +53,7 @@ def connect():
     DB.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB, timeout=20)
     con.execute('CREATE TABLE IF NOT EXISTS matches (id TEXT PRIMARY KEY, body TEXT NOT NULL)')
+    con.execute('CREATE TABLE IF NOT EXISTS standings (scope TEXT PRIMARY KEY, body TEXT NOT NULL)')
     try:
         with con:
             yield con
@@ -83,6 +86,18 @@ def application(env, start_response):
             try: payload = json.loads(env['wsgi.input'].read(length))
             except (ValueError, UnicodeDecodeError): raise ImportError('Petición inválida.')
         if path == '/health' and method == 'GET': return reply({'status':'ok'})
+        if path == '/api/standings' and method in ('GET', 'POST'):
+            params = payload if method == 'POST' else {k: v[0] for k, v in qs.items()}
+            key = json.dumps(standings_scope(params.get('category', ''), params.get('competition', ''), params.get('competition_date', '')))
+            if method == 'POST':
+                snapshot = fetch_standings()
+                snapshot['updated_at'] = datetime.now(timezone.utc).isoformat()
+                with connect() as con:
+                    con.execute('INSERT OR REPLACE INTO standings VALUES (?,?)', (key, json.dumps(snapshot, ensure_ascii=False)))
+                return reply({'standings': snapshot})
+            with connect() as con:
+                saved = con.execute('SELECT body FROM standings WHERE scope=?', (key,)).fetchone()
+            return reply({'standings': json.loads(saved[0]) if saved else None})
         if path == '/api/data' and method == 'GET':
             all_matches = matches()
             hierarchy = qs.get('hierarchy', [''])[0] == '1'
@@ -172,6 +187,7 @@ def application(env, start_response):
             name,mime=files[path]
             return reply((ROOT/'static'/name).read_bytes(),mime=mime)
         return reply({'error':'Página no encontrada.'}, '404 Not Found')
+    except StandingsError as exc: return reply({'error':str(exc)}, '502 Bad Gateway')
     except ImportError as exc: return reply({'error':str(exc)}, '400 Bad Request')
     except (ValueError, TypeError, KeyError): return reply({'error':'Formato de petición inválido.'}, '400 Bad Request')
     except Exception:
@@ -183,3 +199,4 @@ if __name__=='__main__':
     port=int(os.environ.get('MVP_PORT','8092'))
     print(f'MVP Cervelló: http://127.0.0.1:{port}',flush=True)
     with make_server('127.0.0.1',port,application) as server: server.serve_forever()
+

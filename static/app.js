@@ -159,7 +159,35 @@ function render(){const s=data.summary;
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
  renderFocus();
 }
-async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();}catch(e){notice(e.message,true);}}
+let standingsVersion=0;
+function standingsSelection(){
+ if(!selected.startsWith('competition:'))return null;
+ const [start,name]=JSON.parse(selected.slice(12));
+ const normalized=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s*[-–—]\s*/g,'-');
+ return start==='2026-10-01'&&normalized==='PRIMERA FASE-NIVEL C-1'?{category:category||'',competition:name,competition_date:start}:null;
+}
+function paintStandings(snapshot){
+ if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Pulsa Refrescar para obtenerla. No se actualiza automáticamente.';return;}
+ table($('standings-table'),['Pos.','Equipo','PJ','G','P','NP','PF','PC','Puntos'],snapshot.rows.map(r=>[r.position,r.team,r.played,r.won,r.lost,r.not_played,r.points_for,r.points_against,r.points]));
+ $('standings-table').querySelectorAll('tbody tr').forEach((tr,i)=>{if(snapshot.rows[i].team.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()==='MVP CERVELLO')tr.classList.add('focus-row');});
+ $('standings-status').textContent=`${snapshot.title} · ${snapshot.group}. Guardada: ${new Date(snapshot.updated_at).toLocaleString('es-ES')}. Actualización exclusivamente manual.`;
+}
+async function loadStandings(){
+ const version=++standingsVersion,params=standingsSelection();$('standings-panel').hidden=!params;
+ $('standings-table').replaceChildren();if(!params)return;
+ $('standings-status').textContent='Leyendo clasificación guardada…';
+ try{const result=await api('/api/standings?'+new URLSearchParams(params));if(version===standingsVersion)paintStandings(result.standings);}
+ catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
+}
+$('standings-refresh').addEventListener('click',async()=>{
+ const params=standingsSelection();if(!params)return;
+ const version=standingsVersion,button=$('standings-refresh');button.disabled=true;
+ $('standings-status').textContent='Consultando la web oficial…';
+ try{const result=await api('/api/standings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)});if(version===standingsVersion)paintStandings(result.standings);}
+ catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
+ finally{button.disabled=false;}
+});
+async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();await loadStandings();}catch(e){notice(e.message,true);}}
 $('category-select').addEventListener('change',async e=>{category=e.target.value;selected='';await refresh();});
 $('player-select').addEventListener('change',async e=>{player=e.target.value;await refresh();});
 for(const id of ['team-match'])$(id).addEventListener('change',async e=>{selected=e.target.value;await refresh();});
@@ -184,5 +212,6 @@ $('save').addEventListener('click',async()=>{if(!pending)return;if(pending.resul
  const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,replace:$('replace').checked})});selected=result.match.id;category=result.match.category;resetPreview();$('upload-form').reset();$('file-label').textContent='Selecciona o arrastra tu archivo';await refresh();show('upload');$('upload-notice').textContent='Partido guardado. Las estadísticas ya están actualizadas.';$('upload-notice').hidden=false;window.scrollTo({top:0,behavior:'smooth'});
  }catch(error){notice(error.message,true);}finally{$('save').disabled=false;}});
 show(['team','player','upload'].includes(location.hash.slice(1))?location.hash.slice(1):'team');refresh();
+
 
 

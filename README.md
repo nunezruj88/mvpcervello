@@ -160,3 +160,21 @@ curl --fail http://127.0.0.1:8092/health
 ```
 
 El servicio utiliza `ProtectSystem=strict`; la nueva directiva `ReadWritePaths` permite escribir únicamente en esta carpeta adicional. No es necesario dar permisos de escritura a todo el proyecto. Si personalizaste el servicio, incorpora solo `Environment=MVP_IMPORT_DIR=/var/www/mvp-cervello/partidos` y `ReadWritePaths=/var/www/mvp-cervello/partidos` a tu configuración antes de recargarla.
+
+
+## Clasificación oficial: refresco exclusivamente manual
+
+En **Estadísticas del equipo**, selecciona **Toda la competición · 01/10/2026 - Primera fase - Nivel C - 1** para ver la clasificación guardada en SQLite. El botón **Refrescar** consulta la fuente oficial y guarda una nueva copia con su fecha de actualización. La primera vez, pulsa el botón para obtenerla. Abrir la página, cambiar de jugador/categoría/partido o reiniciar el servicio **nunca consulta la web externa**. No hay tareas programadas ni temporizadores de actualización.
+
+La opción indicada se asocia expresamente a https://www.basquetcatala.cat/competicions/resultats/24222, que la federación identifica como **C.T. Pre-infantil Masculí · Primera fase · Nivel C · Grupo 10**. El nombre importado «Nivel C - 1» se mantiene; la tabla muestra el grupo real de la fuente para evitar confusiones. Otras competiciones necesitan una asociación propia, no reutilizan esta clasificación.
+
+La tabla muestra posición, equipo, partidos jugados, ganados, perdidos, no presentados, puntos a favor, puntos en contra y puntos de clasificación. Las copias se guardan en la tabla SQLite `standings`, separadas por categoría, fecha de competición y nombre de competición, independientemente del jugador. No se modifican las jugadas importadas.
+
+`GET /api/standings` solo lee la copia local. `POST /api/standings`, activado por el botón, obtiene y valida la tabla antes de reemplazarla en una transacción. Si hay un error de red, una verificación de seguridad o cambia el formato, se muestra el error y se conserva la copia anterior. El servidor necesita acceso HTTPS saliente a la web de la federación; sus verificaciones pueden impedir la descarga desde algunos servidores. No se eluden esas verificaciones.
+
+No requiere nuevas dependencias ni reimportar CSV. Actualización del LXC:
+
+```bash
+cd /var/www/mvp-cervello
+git pull --ff-only origin main && systemctl restart mvp-cervello
+```
