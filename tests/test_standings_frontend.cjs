@@ -18,13 +18,14 @@ async function run(code){return vm.runInContext(code,context);}
  assert.equal($('standings-panel').hidden,false);
  assert.equal($('standings-refresh').disabled,true);
  assert.equal(calls.length,0);
- for(const name of ['Primera fase - Nivel C - 1','Primera Fase - Nivell C - 10','Primera fase - Nivel C - 01']){
+ for(const name of ['Primera fase - Nivel C - 1','Primera Fase - Nivell C - 10','Primera fase - Nivel C - 01','Primera fase - Nivel C - 11','Primera Fase - Nivell C - 11']){
   await run('selected='+JSON.stringify('competition:'+JSON.stringify(['2026-10-01',name]))+';loadStandings()');
   assert.equal($('standings-panel').hidden,false);
   assert.equal($('standings-refresh').disabled,false);
  }
  assert.ok(calls.every(([,method])=>method==='GET'));
  await $('standings-refresh').click();
+ assert.ok(calls.at(-1)[0]==='/api/standings');
  assert.equal(calls.filter(([,method])=>method==='POST').length,1);
  await run("selected='match-id';loadStandings()");
  assert.equal($('standings-panel').hidden,false);

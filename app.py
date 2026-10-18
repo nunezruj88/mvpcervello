@@ -90,7 +90,7 @@ def application(env, start_response):
             params = payload if method == 'POST' else {k: v[0] for k, v in qs.items()}
             key = json.dumps(standings_scope(params.get('category', ''), params.get('competition', ''), params.get('competition_date', '')))
             if method == 'POST':
-                snapshot = fetch_standings()
+                snapshot = fetch_standings(json.loads(key)[2])
                 snapshot['updated_at'] = datetime.now(timezone.utc).isoformat()
                 with connect() as con:
                     con.execute('INSERT OR REPLACE INTO standings VALUES (?,?)', (key, json.dumps(snapshot, ensure_ascii=False)))

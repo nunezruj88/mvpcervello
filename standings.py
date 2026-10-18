@@ -5,7 +5,11 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError
 from stats import norm
 
-SOURCE = 'https://www.basquetcatala.cat/competicions/resultats/24222'
+DEFAULT_COMPETITION = 'PRIMERA FASE-NIVEL C-1'
+SOURCES = {
+    DEFAULT_COMPETITION: dict(url='https://www.basquetcatala.cat/competicions/resultats/24222', category='C.T. PRE-INFANTIL MASCULI', group=10),
+    'PRIMERA FASE-NIVEL C-11': dict(url='https://www.basquetcatala.cat/competicions/resultats/24360', category='C.T. MINI MASCULI', group=11),
+}
 
 class StandingsError(Exception):
     pass
@@ -14,12 +18,15 @@ def scope(category, competition, start):
     if not all(isinstance(v, str) for v in (category, competition, start)):
         raise StandingsError('Selección de competición inválida.')
     name = re.sub(r'\s*[-–—]\s*', '-', norm(competition)).replace('NIVELL', 'NIVEL')
-    if start != '2026-10-01' or not re.fullmatch(r'PRIMERA FASE-NIVEL C-(?:0?1|10)', name):
+    if re.fullmatch(r'PRIMERA FASE-NIVEL C-(?:0?1|10)', name):
+        name = DEFAULT_COMPETITION
+    if start != '2026-10-01' or name not in SOURCES:
         raise StandingsError('Esta competición no tiene una fuente de clasificación configurada.')
-    return [norm(category), start, 'PRIMERA FASE-NIVEL C-1']
+    return [norm(category), start, name]
 
 class ClassificationParser(HTMLParser):
-    def __init__(self):
+    def __init__(self, source):
+        self.source = source
         super().__init__(convert_charrefs=True)
         self.stack = []
         self.active = False
@@ -57,7 +64,7 @@ class ClassificationParser(HTMLParser):
 
     def handle_data(self, text):
         text = text.strip()
-        if norm(text) == "PRIMERA FASE - NIVELL C - 10":
+        if norm(text) == f"PRIMERA FASE - NIVELL C - {self.source['group']}":
             self.correct_group = True
         if self.heading and text:
             self.title.append(text)
@@ -66,8 +73,9 @@ class ClassificationParser(HTMLParser):
         if self.row_depth is not None and text:
             self.parts.append(text)
 
-def parse_standings(html):
-    parser = ClassificationParser()
+def parse_standings(html, competition=DEFAULT_COMPETITION):
+    source = SOURCES[competition]
+    parser = ClassificationParser(source)
     parser.feed(html)
     rows = []
     for parts in parser.rows:
@@ -80,18 +88,19 @@ def parse_standings(html):
             raise StandingsError('La clasificación recibida no es válida.')
         rows.append(row)
     title = ' '.join(parser.title)
-    if not rows or not parser.correct_group or 'PRE-INFANTIL MASCULI' not in norm(title):
+    if not rows or not parser.correct_group or source['category'] != norm(title):
         raise StandingsError('No se ha podido leer la clasificación oficial. Puede haber una verificación de seguridad. Se conserva la copia anterior.')
-    return dict(rows=rows, source_url=SOURCE, title=title, group='Primera fase · Nivel C · Grupo 10')
+    return dict(rows=rows, source_url=source['url'], title=title, group=f"Primera fase · Nivel C · Grupo {source['group']}")
 
-def fetch_standings():
+def fetch_standings(competition=DEFAULT_COMPETITION):
+    source_url = SOURCES[competition]['url']
     try:
-        with urlopen(Request(SOURCE, headers={'User-Agent':'MVP-Cervello/1.0', 'Accept':'text/html'}), timeout=12) as response:
-            if response.geturl().split('?')[0] != SOURCE:
+        with urlopen(Request(source_url, headers={'User-Agent':'MVP-Cervello/1.0', 'Accept':'text/html'}), timeout=12) as response:
+            if response.geturl().split('?')[0] != source_url:
                 raise StandingsError('La web ha redirigido la consulta, posiblemente a una verificación de seguridad. Se conserva la copia anterior.')
             raw = response.read(2*1024*1024+1)
             if len(raw) > 2*1024*1024:
                 raise StandingsError('La respuesta de la web es demasiado grande.')
-            return parse_standings(raw.decode('utf-8'))
+            return parse_standings(raw.decode('utf-8'), competition)
     except (URLError, TimeoutError, OSError, UnicodeError) as exc:
         raise StandingsError('No se ha podido consultar la web oficial. Se conserva la copia anterior.') from exc

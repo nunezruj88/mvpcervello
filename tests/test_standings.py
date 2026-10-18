@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlencode
 import app
-from standings import parse_standings, StandingsError, scope
+from standings import parse_standings, StandingsError, scope, fetch_standings
 
 HTML = '''<h2 id="titleCategory">C.t. Pre-infantil Masculí</h2>
 <div>Primera Fase - Nivell C - 10</div>
@@ -51,6 +51,39 @@ class StandingsTests(unittest.TestCase):
         with self.assertRaises(StandingsError):
             scope('Preinfantil', 'Primera fase - Nivel C - 2', '2026-10-01')
 
+    def test_group_11_uses_own_category_and_source(self):
+        mini = HTML.replace('Pre-infantil', 'Mini').replace('Nivell C - 10', 'Nivell C - 11')
+        parsed = parse_standings(mini, 'PRIMERA FASE-NIVEL C-11')
+        self.assertTrue(parsed['source_url'].endswith('/24360'))
+        self.assertTrue(parsed['group'].endswith('11'))
+        with self.assertRaises(StandingsError):
+            parse_standings(HTML, 'PRIMERA FASE-NIVEL C-11')
+        with self.assertRaises(StandingsError):
+            parse_standings(mini)
+
+    @patch('app.fetch_standings')
+    def test_both_competitions_keep_independent_saved_data(self, fetch):
+        fetch.return_value = parse_standings(HTML)
+        first = self.call('POST')['body']['standings']
+        params = self.params | {'competition':'Primera fase - Nivel C - 11'}
+        self.assertIsNone(self.call(params=params)['body']['standings'])
+        mini = HTML.replace('Pre-infantil', 'Mini').replace('Nivell C - 10', 'Nivell C - 11')
+        fetch.return_value = parse_standings(mini, 'PRIMERA FASE-NIVEL C-11')
+        second = self.call('POST', params)['body']['standings']
+        fetch.assert_called_with('PRIMERA FASE-NIVEL C-11')
+        self.assertEqual(self.call()['body']['standings'], first)
+        self.assertEqual(self.call(params=params)['body']['standings'], second)
+
+    @patch('standings.urlopen')
+    def test_refresh_requests_only_configured_url_for_group_11(self, urlopen):
+        mini = HTML.replace('Pre-infantil', 'Mini').replace('Nivell C - 10', 'Nivell C - 11')
+        response = urlopen.return_value.__enter__.return_value
+        response.geturl.return_value = 'https://www.basquetcatala.cat/competicions/resultats/24360'
+        response.read.return_value = mini.encode()
+        result = fetch_standings('PRIMERA FASE-NIVEL C-11')
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, result['source_url'])
+
     def test_reject_empty_challenge_wrong_category_and_bad_values(self):
         for html in ['Verificació de seguretat', HTML.replace('Pre-infantil', 'Júnior'), HTML.replace('<div>155</div>', '<div>—</div>')]:
             with self.assertRaises(StandingsError): parse_standings(html)
@@ -67,7 +100,7 @@ class StandingsTests(unittest.TestCase):
         self.assertIn('updated_at', saved)
         self.assertEqual(self.call()['body']['standings'], saved)
         self.assertIsNone(self.call(params=self.params | {'category':'Otra categoría'})['body']['standings'])
-        fetch.assert_called_once_with()
+        fetch.assert_called_once_with('PRIMERA FASE-NIVEL C-1')
 
     @patch('app.fetch_standings')
     def test_failed_refresh_preserves_previous_snapshot(self, fetch):
