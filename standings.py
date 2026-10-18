@@ -36,12 +36,21 @@ class ClassificationParser(HTMLParser):
         self.heading = False
         self.title = []
         self.correct_group = False
+        self.subtitle_depth = None
+        self.subtitle = []
+        self.round = None
+        self.ignore = 0
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
+        if tag in ('script', 'style'):
+            self.ignore += 1
         if tag in {'br','img','input','hr','meta','link','source','wbr','area','base','embed','param','track'}:
             return
         self.stack.append(tag)
+        if attrs.get('id') == 'subTitle':
+            self.subtitle_depth = len(self.stack)
+            self.subtitle = []
         if attrs.get('id') == 'titleCategory':
             self.heading = True
         if tag == 'footer' or attrs.get('id') == 'nexround' or 'nexround' in attrs.get('class', '').split():
@@ -51,8 +60,14 @@ class ClassificationParser(HTMLParser):
             self.parts = []
 
     def handle_endtag(self, tag):
+        if tag in ('script', 'style'):
+            self.ignore = max(0, self.ignore - 1)
         if not self.stack or tag not in self.stack:
             return
+        if self.subtitle_depth == len(self.stack):
+            subtitle = ' '.join(norm(' '.join(self.subtitle)).split())
+            self.correct_group = subtitle == f"PRIMERA FASE - NIVELL C - {self.source['group']}"
+            self.subtitle_depth = None
         if self.row_depth == len(self.stack):
             self.rows.append(self.parts)
             self.row_depth = None
@@ -63,13 +78,17 @@ class ClassificationParser(HTMLParser):
                 break
 
     def handle_data(self, text):
+        if self.ignore:
+            return
         text = text.strip()
-        if norm(text) == f"PRIMERA FASE - NIVELL C - {self.source['group']}":
-            self.correct_group = True
+        if self.subtitle_depth is not None and text:
+            self.subtitle.append(text)
         if self.heading and text:
             self.title.append(text)
-        if 'CLASSIFICACIO A LA JORNADA' in norm(text):
+        if 'CLASSIFICACIO A LA JORNADA' in ' '.join(norm(text).split()):
             self.active = True
+            found = re.search(r'JORNADA\s*(\d+)', norm(text))
+            self.round = int(found[1]) if found else None
         if self.row_depth is not None and text:
             self.parts.append(text)
 
@@ -90,7 +109,7 @@ def parse_standings(html, competition=DEFAULT_COMPETITION):
     title = ' '.join(parser.title)
     if not rows or not parser.correct_group or source['category'] != norm(title):
         raise StandingsError('No se ha podido leer la clasificación oficial. Puede haber una verificación de seguridad. Se conserva la copia anterior.')
-    return dict(rows=rows, source_url=source['url'], title=title, group=f"Primera fase · Nivel C · Grupo {source['group']}")
+    return dict(rows=rows, round=parser.round, source_url=source['url'], title=title, group=f"Primera fase · Nivel C · Grupo {source['group']}")
 
 def fetch_standings(competition=DEFAULT_COMPETITION):
     source_url = SOURCES[competition]['url']

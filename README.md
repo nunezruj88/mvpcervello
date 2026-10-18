@@ -178,3 +178,17 @@ No requiere nuevas dependencias ni reimportar CSV. Actualización del LXC:
 cd /var/www/mvp-cervello
 git pull --ff-only origin main && systemctl restart mvp-cervello
 ```
+
+## Importar datos: partidos y clasificaciones HTML
+
+La sección antes llamada **Cargar partido** ahora se llama **Importar datos** y reúne las importaciones manuales. Mantiene la carga de partidos CSV/Excel y añade el formulario **Importar clasificación**.
+
+1. Abre la clasificación oficial en tu navegador y guarda la página como HTML (`Ctrl+S`). Se admiten `.html` y `.htm`, hasta 10 MB. No hace falta subir la carpeta de recursos que pueda crear el navegador.
+2. En **Importar datos → Importar clasificación**, elige la categoría y competición de destino. El formulario ofrece las competiciones configuradas presentes en los partidos guardados, independientemente del jugador y de los filtros superiores. Si no hay destinos, importa primero un partido con categoría, competición y fecha de competición.
+3. Selecciona el HTML y pulsa **Revisar clasificación**. Se comprueban la categoría oficial y el grupo del archivo; la tabla muestra posición, equipos, partidos, victorias, derrotas, no presentados, PF, PC y puntos. Se conserva la jornada indicada en la página.
+4. Pulsa **Guardar clasificación**. Si existe una clasificación para ese destino, confirma **Reemplazar**. La revisión no guarda datos ni crea copias.
+5. En **Estadísticas del equipo**, selecciona esa categoría y **Toda la competición** para leer la clasificación guardada. La fecha mostrada corresponde al guardado; los resultados corresponden a la página que descargaste.
+
+El formulario procesa solo el HTML subido: no ejecuta sus scripts, no abre enlaces, no carga recursos y no consulta la web. Guarda la tabla en SQLite y una copia exacta del HTML en `partidos/`, con nombre único; los reemplazos conservan los originales anteriores. Si falla la validación, el archivo o SQLite, se mantiene la clasificación anterior. El botón **Refrescar** sigue siendo una consulta manual independiente a la web y puede fallar si la federación rechaza la conexión con HTTP 403. No se añade ninguna actualización automática.
+
+La importación de clasificaciones no modifica las acciones ni las estadísticas de los partidos. No requiere dependencias nuevas, migraciones manuales ni cambios de permisos si ya está habilitada la carpeta `partidos`. Las nuevas pruebas incluyen `python -m unittest discover -s tests`, `node tests/test_standings_frontend.cjs` y `node tests/test_standings_import_frontend.cjs`.

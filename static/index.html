@@ -5,7 +5,7 @@
 <aside class="sidebar" id="sidebar">
   <a class="brand" href="/"><span class="ball">◉</span><span>MVP<span class="brand-sub">CERVELLÓ</span></span></a>
   <p class="nav-label">CUADERNO DE EQUIPO</p>
-  <nav aria-label="Secciones"><button data-view="team" class="active">◫ <span>Estadísticas del equipo</span></button><button data-view="player">◎ <span>Estadísticas del jugador</span></button><button data-view="upload">↑ <span>Cargar partido</span></button></nav>
+  <nav aria-label="Secciones"><button data-view="team" class="active">◫ <span>Estadísticas del equipo</span></button><button data-view="player">◎ <span>Estadísticas del jugador</span></button><button data-view="upload">↑ <span>Importar datos</span></button></nav>
   <div class="side-bottom"><span class="status-dot"></span> Datos guardados en el servidor<p>Cada jugada cuenta.</p></div>
 </aside>
 <main>
@@ -33,7 +33,7 @@
   </section>
   <section id="upload" class="view" hidden>
     <div id="upload-notice" class="coverage complete" role="status" hidden></div>
-    <div class="heading"><div><p class="eyebrow">ARCHIVO DE PARTIDOS</p><h1>De la grabación al equipo.</h1><p class="muted">Sube las acciones extraídas del vídeo y revisa el partido antes de guardarlo.</p></div></div>
+    <div class="heading"><div><p class="eyebrow">IMPORTACIONES MANUALES</p><h1>Importar datos</h1><p class="muted">Añade partidos y clasificaciones. Revisa cada archivo antes de guardarlo.</p></div></div>
     <div class="grid upload-grid"><article class="panel"><p class="eyebrow">01 / SELECCIONA EL ARCHIVO</p><h2>Añadir un partido</h2>
     <form id="upload-form"><label class="dropzone" id="dropzone"><span class="upload-icon">↑</span><strong id="file-label">Selecciona o arrastra tu archivo</strong><span>Excel .xlsx o CSV · Máximo 10 MB</span><input id="file" type="file" accept=".xlsx,.csv" required></label>
     <label class="check"><input id="complete" type="checkbox"><span>El archivo contiene todas las acciones del partido completo</span></label><p class="footnote">Deja esta casilla desmarcada para fragmentos. Subir otro archivo del mismo partido reemplaza sus acciones; no une fragmentos.</p>
@@ -41,6 +41,23 @@
     <a class="text-link template" href="/plantilla.csv" download>Descargar plantilla CSV ↓</a></article>
     <article class="panel steps"><p class="eyebrow">UN FLUJO SENCILLO</p><h2>Guarda. Sube. Analiza.</h2><div><span>1</span><section><h3>Graba las jugadas</h3><p>Recorre la lista de la app dejando las acciones legibles y algo de solapamiento.</p></section></div><div><span>2</span><section><h3>Obtén el archivo</h3><p>Extrae el vídeo en este chat y guarda el Excel o CSV con una fila por acción.</p></section></div><div><span>3</span><section><h3>Construye tu historial</h3><p>Revisa el archivo y guárdalo. Cada partido queda disponible desde cualquier dispositivo que acceda a la web.</p></section></div></article></div>
     <article id="preview" class="panel" hidden><p class="eyebrow">02 / REVISA Y CONFIRMA</p><h2 id="preview-title"></h2><div id="preview-info"></div><div id="preview-table" class="table-wrap"></div><label id="replace-label" class="check" hidden><input id="replace" type="checkbox"><span>Reemplazar el partido existente con estas acciones</span></label><button class="primary" id="save" type="button">Guardar partido</button></article>
+    <article class="panel" id="standings-import-panel">
+      <p class="eyebrow">CLASIFICACIONES</p><h2>Importar clasificación</h2>
+      <p>Abre la clasificación en tu navegador y guarda la página como HTML. Sube solo el archivo .html; no necesitas su carpeta de recursos.</p>
+      <form id="standings-import-form">
+        <label class="select-label">CATEGORÍA Y COMPETICIÓN DE DESTINO<select id="standings-destination" aria-label="Destino de la clasificación" required><option value="">Selecciona una competición</option></select></label>
+        <p class="footnote" id="standings-options-status">Leyendo competiciones disponibles…</p>
+        <label class="dropzone"><span class="upload-icon">↑</span><strong id="standings-file-label">Selecciona una página HTML guardada</strong><span>HTML o HTM · Máximo 10 MB</span><input id="standings-file" type="file" accept=".html,.htm,text/html" required></label>
+        <button class="primary" id="standings-preview-button" type="submit" disabled>Revisar clasificación →</button>
+      </form>
+      <p id="standings-import-status" role="status" hidden></p>
+      <div id="standings-import-preview" hidden>
+        <h3>Revisa la clasificación</h3><p id="standings-import-info"></p><div id="standings-import-table" class="table-wrap"></div>
+        <label id="standings-replace-label" class="check" hidden><input id="standings-replace" type="checkbox"><span>Reemplazar la clasificación guardada para esta categoría y competición</span></label>
+        <button id="standings-import-save" class="primary" type="button">Guardar clasificación</button>
+      </div>
+      <p class="footnote">La importación usa únicamente el archivo que seleccionas y guarda una copia original. No consulta la web. La clasificación queda disponible al seleccionar «Toda la competición» en Estadísticas del equipo.</p>
+    </article>
     <article class="panel"><p class="eyebrow">TUS IMPORTACIONES</p><h2>Partidos guardados</h2><div id="matches-table" class="table-wrap"></div></article>
   </section>
   <footer>MVP CERVELLÓ <span>Estadísticas a partir de tus jugadas.</span></footer>

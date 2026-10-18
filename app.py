@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 from wsgiref.simple_server import make_server
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from standings import scope as standings_scope, fetch_standings, StandingsError
+from standings import scope as standings_scope, fetch_standings, parse_standings, StandingsError
 from importer import parse, ImportError
 from stats import summarize, norm, TEAM, team_matches, team_names, player_names, player_key, category_names, category_matches, TRACKED_PLAYERS, is_team
 from stats import competition_matches, scoreboard
@@ -67,6 +67,19 @@ def matches():
 def brief(m):
     return {k:v for k,v in m.items() if k != 'events'} | {'event_count':len(m['events'])}
 
+def standings_import_options():
+    """Local destinations, independent of the current player or screen filters."""
+    options = {}
+    for match in matches():
+        for category in category_names([match]):
+            destination = dict(category=category, competition=match.get('competition', ''), competition_date=match.get('competition_date', ''))
+            try:
+                key = json.dumps(standings_scope(category, destination['competition'], destination['competition_date']))
+            except StandingsError:
+                continue
+            options.setdefault(key, destination)
+    return sorted(options.values(), key=lambda v: (norm(v['category']), v['competition_date'], norm(v['competition'])))
+
 def application(env, start_response):
     method, path = env['REQUEST_METHOD'], env.get('PATH_INFO', '/')
     qs = parse_qs(env.get('QUERY_STRING',''), keep_blank_values=True)
@@ -86,6 +99,50 @@ def application(env, start_response):
             try: payload = json.loads(env['wsgi.input'].read(length))
             except (ValueError, UnicodeDecodeError): raise ImportError('Petición inválida.')
         if path == '/health' and method == 'GET': return reply({'status':'ok'})
+        if path == '/api/standings/options' and method == 'GET':
+            return reply({'options': standings_import_options()})
+        if path == '/api/standings/import' and method == 'POST':
+            if not isinstance(payload, dict): raise ImportError('Petición inválida.')
+            if not isinstance(payload.get('preview', False), bool) or not isinstance(payload.get('replace', False), bool):
+                raise ImportError('Indicador de revisión o reemplazo inválido.')
+            try:
+                destination = {k: payload.get(k, '') for k in ('category', 'competition', 'competition_date')}
+                scope = standings_scope(destination['category'], destination['competition'], destination['competition_date'])
+                available = [standings_scope(o['category'], o['competition'], o['competition_date']) for o in standings_import_options()]
+                if scope not in available:
+                    raise ImportError('Selecciona una categoría y competición de los partidos importados.')
+                name = str(payload.get('filename', '')).replace('\\', '/').split('/')[-1]
+                if Path(name).suffix.lower() not in ('.html', '.htm'):
+                    raise ImportError('Selecciona una página guardada en formato HTML o HTM.')
+                try:
+                    raw = base64.b64decode(payload.get('data', ''), validate=True)
+                except (ValueError, TypeError):
+                    raise ImportError('Archivo HTML inválido.')
+                if not raw or len(raw) > 10 * 1024 * 1024:
+                    raise ImportError('El archivo HTML está vacío o supera 10 MB.')
+                try:
+                    html = raw.decode('utf-8-sig')
+                except UnicodeDecodeError:
+                    html = raw.decode('cp1252')
+                snapshot = parse_standings(html, scope[2])
+            except (StandingsError, UnicodeError) as exc:
+                raise ImportError(str(exc)) from exc
+            key = json.dumps(scope)
+            with import_storage() as (con, archived):
+                if not payload.get('preview', False): con.execute('BEGIN IMMEDIATE')
+                existing = con.execute('SELECT body FROM standings WHERE scope=?', (key,)).fetchone()
+                if payload.get('preview', False):
+                    return reply(dict(standings=snapshot, destination=destination, exists=bool(existing)))
+                if existing and not payload.get('replace', False):
+                    return reply({'error': 'Ya hay una clasificación guardada. Confirma reemplazar para actualizarla.'}, '409 Conflict')
+                now = datetime.now(timezone.utc)
+                try:
+                    archived.append(archive_upload('clasificacion_' + name, raw, {'date': now.date().isoformat()}))
+                except OSError:
+                    return reply({'error': 'No se ha podido guardar la copia HTML. Revisa permisos y espacio en partidos. La clasificación anterior se conserva.'}, '500 Internal Server Error')
+                snapshot.update(updated_at=now.isoformat(), import_method='html', filename=name, archived_filename=archived[-1].name)
+                con.execute('INSERT OR REPLACE INTO standings VALUES (?,?)', (key, json.dumps(snapshot, ensure_ascii=False)))
+            return reply(dict(standings=snapshot, destination=destination), '201 Created')
         if path == '/api/standings' and method in ('GET', 'POST'):
             params = payload if method == 'POST' else {k: v[0] for k, v in qs.items()}
             key = json.dumps(standings_scope(params.get('category', ''), params.get('competition', ''), params.get('competition_date', '')))

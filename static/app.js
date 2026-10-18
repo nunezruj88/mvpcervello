@@ -17,7 +17,7 @@ const date=s=>s.split('-').reverse().join('/');
 function show(view){current=view;document.querySelectorAll('.view').forEach(e=>e.hidden=e.id!==view);document.querySelectorAll('nav button').forEach(e=>e.classList.toggle('active',e.dataset.view===view));location.hash=view;window.scrollTo({top:0});}
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
 function notice(message,error=false){$('notice').textContent=message;$('notice').className=error?'error':'';$('notice').hidden=false;if(error)$('notice').scrollIntoView({behavior:'smooth',block:'center'});}
-async function api(url,options){const res=await fetch(url,options);let body;try{body=await res.json();}catch{throw Error('No se puede leer la respuesta del servidor.');}if(!res.ok)throw Error(body.error||'No se ha podido completar la petición.');return body;}
+async function api(url,options){const res=await fetch(url,options);let body;try{body=await res.json();}catch{throw Error('No se puede leer la respuesta del servidor.');}if(!res.ok){const error=Error(body.error||'No se ha podido completar la petición.');error.status=res.status;throw error;}return body;}
 function table(container,headers,rows,focusIndex=-1){const t=el('table'), head=el('thead'),hr=el('tr');headers.forEach(v=>hr.append(el('th',v)));head.append(hr);const body=el('tbody');for(const row of rows){const tr=el('tr');if(focusIndex>=0&&row[focusIndex]===12)tr.className='focus-row';for(const v of row){const td=el('td');if(v instanceof Node)td.append(v);else td.textContent=v===null||v===undefined?'—':String(v);tr.append(td);}body.append(tr);}t.append(head,body);container.replaceChildren(rows.length?t:el('p','Todavía no hay acciones registradas.','muted'));}
 function kpis(id,items){$(id).replaceChildren(...items.map(([label,value,sub])=>{const e=el('div',undefined,'kpi');e.append(el('span',label,'label'),el('strong',fmt(value)),el('p',sub));return e;}));}
 function badge(complete){return el('span',complete?'Completo':'Parcial',complete?'badge done':'badge');}
@@ -167,10 +167,10 @@ function standingsSelection(){
  return start==='2026-10-01'&&/^PRIMERA FASE-NIVEL C-(?:0?1|10|11)$/.test(normalized)?{category:category||'',competition:name,competition_date:start}:null;
 }
 function paintStandings(snapshot){
- if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Pulsa Refrescar para obtenerla. No se actualiza automáticamente.';return;}
+ if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Impórtala desde «Importar datos» o pulsa Refrescar para consultar la web. No se actualiza automáticamente.';return;}
  table($('standings-table'),['Pos.','Equipo','PJ','G','P','NP','PF','PC','Puntos'],snapshot.rows.map(r=>[r.position,r.team,r.played,r.won,r.lost,r.not_played,r.points_for,r.points_against,r.points]));
  $('standings-table').querySelectorAll('tbody tr').forEach((tr,i)=>{if(snapshot.rows[i].team.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()==='MVP CERVELLO')tr.classList.add('focus-row');});
- $('standings-status').textContent=`${snapshot.title} · ${snapshot.group}. Guardada: ${new Date(snapshot.updated_at).toLocaleString('es-ES')}. Actualización exclusivamente manual.`;
+ $('standings-status').textContent=`${snapshot.title} · ${snapshot.group}${snapshot.round?' · Jornada '+snapshot.round:''}${snapshot.import_method==='html'?' · Importada desde HTML':''}. Guardada: ${new Date(snapshot.updated_at).toLocaleString('es-ES')}. Actualización exclusivamente manual.`;
 }
 async function loadStandings(){
  const version=++standingsVersion,params=standingsSelection();$('standings-panel').hidden=false;
@@ -189,7 +189,7 @@ $('standings-refresh').addEventListener('click',async()=>{
  catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
  finally{standingsRefreshing=false;button.disabled=!standingsSelection();}
 });
-async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();await loadStandings();}catch(e){notice(e.message,true);}}
+async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();await Promise.all([loadStandings(),loadStandingsImportOptions()]);}catch(e){notice(e.message,true);}}
 $('category-select').addEventListener('change',async e=>{category=e.target.value;selected='';await refresh();});
 $('player-select').addEventListener('change',async e=>{player=e.target.value;await refresh();});
 for(const id of ['team-match'])$(id).addEventListener('change',async e=>{selected=e.target.value;await refresh();});
@@ -213,6 +213,55 @@ $('upload-form').addEventListener('submit',async e=>{e.preventDefault();const fi
 $('save').addEventListener('click',async()=>{if(!pending)return;if(pending.result.exists&&!$('replace').checked){notice('Marca reemplazar para actualizar este partido.',true);return;}$('save').disabled=true;try{
  const result=await api('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,replace:$('replace').checked})});selected=result.match.id;category=result.match.category;resetPreview();$('upload-form').reset();$('file-label').textContent='Selecciona o arrastra tu archivo';await refresh();show('upload');$('upload-notice').textContent='Partido guardado. Las estadísticas ya están actualizadas.';$('upload-notice').hidden=false;window.scrollTo({top:0,behavior:'smooth'});
  }catch(error){notice(error.message,true);}finally{$('save').disabled=false;}});
+let standingsPending=null, standingsImportBusy=false;
+function resetStandingsPreview(){standingsPending=null;$('standings-import-preview').hidden=true;$('standings-replace').checked=false;$('standings-import-status').hidden=true;}
+function standingsImportStatus(message){const status=$('standings-import-status');status.textContent=message;status.hidden=false;}
+async function loadStandingsImportOptions(){
+ const select=$('standings-destination'),previous=select.value;
+ try{
+  const result=await api('/api/standings/options');
+  select.replaceChildren(new Option('Selecciona una competición',''),...result.options.map(o=>new Option(`${o.category||'Sin categoría'} · ${date(o.competition_date)} · ${o.competition}`,JSON.stringify(o))));
+  if(result.options.some(o=>JSON.stringify(o)===previous))select.value=previous;
+  else if(previous)resetStandingsPreview();
+  select.disabled=!result.options.length||standingsImportBusy;
+  $('standings-preview-button').disabled=!result.options.length||standingsImportBusy;
+  $('standings-options-status').textContent=result.options.length?'Elige el destino de esta clasificación, independientemente de los filtros superiores.':'Importa primero un partido con categoría y una competición configurada para habilitar la clasificación.';
+ }catch(e){$('standings-options-status').textContent=e.message;$('standings-preview-button').disabled=true;}
+}
+$('standings-destination').addEventListener('change',resetStandingsPreview);
+$('standings-file').addEventListener('change',()=>{resetStandingsPreview();$('standings-file-label').textContent=$('standings-file').files[0]?.name||'Selecciona una página HTML guardada';});
+$('standings-import-form').addEventListener('submit',async e=>{
+ e.preventDefault();if(standingsImportBusy)return;
+ const file=$('standings-file').files[0],destination=$('standings-destination').value;
+ if(!file||!destination)return;
+ resetStandingsPreview();
+ if(file.size>10*1024*1024){standingsImportStatus('El archivo HTML supera 10 MB.');return;}
+ standingsImportBusy=true;$('standings-preview-button').disabled=true;
+ $('standings-file').disabled=true;$('standings-destination').disabled=true;
+ try{
+  const payload={...JSON.parse(destination),filename:file.name,data:await encoded(file)};
+  const result=await api('/api/standings/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,preview:true})});
+  standingsPending={payload,result};
+  const snapshot=result.standings;
+  $('standings-import-info').textContent=`Destino: ${result.destination.category||'Sin categoría'} · ${date(result.destination.competition_date)} · ${result.destination.competition}. ${snapshot.title} · ${snapshot.group}${snapshot.round?' · Jornada '+snapshot.round:''}. ${snapshot.rows.length} equipos.`;
+  table($('standings-import-table'),['Pos.','Equipo','PJ','G','P','NP','PF','PC','Puntos'],snapshot.rows.map(r=>[r.position,r.team,r.played,r.won,r.lost,r.not_played,r.points_for,r.points_against,r.points]));
+  $('standings-replace-label').hidden=!result.exists;$('standings-import-preview').hidden=false;
+ }catch(e){standingsImportStatus(e.message);}
+ finally{standingsImportBusy=false;$('standings-preview-button').disabled=false;$('standings-file').disabled=false;$('standings-destination').disabled=false;}
+});
+$('standings-import-save').addEventListener('click',async()=>{
+ if(!standingsPending||standingsImportBusy)return;
+ if(standingsPending.result.exists&&!$('standings-replace').checked){standingsImportStatus('Confirma reemplazar la clasificación anterior antes de guardar.');return;}
+ standingsImportBusy=true;$('standings-import-save').disabled=true;$('standings-preview-button').disabled=true;
+ $('standings-file').disabled=true;$('standings-destination').disabled=true;
+ try{
+  await api('/api/standings/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...standingsPending.payload,replace:$('standings-replace').checked})});
+  resetStandingsPreview();$('standings-file').value='';$('standings-file-label').textContent='Selecciona una página HTML guardada';
+  standingsImportStatus('Clasificación guardada. Disponible en Estadísticas del equipo al seleccionar toda la competición.');
+  await loadStandings();
+ }catch(e){if(e.status===409&&standingsPending){standingsPending.result.exists=true;$('standings-replace-label').hidden=false;}standingsImportStatus(e.message);}
+ finally{standingsImportBusy=false;$('standings-import-save').disabled=false;$('standings-preview-button').disabled=false;$('standings-file').disabled=false;$('standings-destination').disabled=false;}
+});
 show(['team','player','upload'].includes(location.hash.slice(1))?location.hash.slice(1):'team');refresh();
 
 

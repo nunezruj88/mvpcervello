@@ -9,7 +9,7 @@ import app
 from standings import parse_standings, StandingsError, scope, fetch_standings
 
 HTML = '''<h2 id="titleCategory">C.t. Pre-infantil Masculí</h2>
-<div>Primera Fase - Nivell C - 10</div>
+<div id="subTitle">Primera Fase - Nivell C - 10</div>
 <div id="fila">Un partido, no la clasificación</div>
 <div>Classificació a la jornada&nbsp;3</div>
 <div id="fila"><div><div>1</div><a>CB ABRERA</a></div><div>3</div><div>3</div><div>0</div><div>0</div><div>188</div><div>99</div><div>6</div></div>
