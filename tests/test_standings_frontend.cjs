@@ -6,6 +6,7 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'static/index.html'),'utf8');
 assert.ok(!html.match(/<article id="standings-panel"[^>]*\bhidden\b/));
+assert.ok(!html.includes('id="standings-refresh"'));
 const script=fs.readFileSync(path.join(root,'static/app.js'),'utf8');
 const block=script.slice(script.indexOf('let standingsVersion='),script.indexOf('async function refresh(){'));
 const elements=new Map(),calls=[];
@@ -16,20 +17,14 @@ async function run(code){return vm.runInContext(code,context);}
 (async()=>{
  await run('loadStandings()');
  assert.equal($('standings-panel').hidden,false);
- assert.equal($('standings-refresh').disabled,true);
  assert.equal(calls.length,0);
  for(const name of ['Primera fase - Nivel C - 1','Primera Fase - Nivell C - 10','Primera fase - Nivel C - 01','Primera fase - Nivel C - 11','Primera Fase - Nivell C - 11']){
   await run('selected='+JSON.stringify('competition:'+JSON.stringify(['2026-10-01',name]))+';loadStandings()');
   assert.equal($('standings-panel').hidden,false);
-  assert.equal($('standings-refresh').disabled,false);
  }
  assert.ok(calls.every(([,method])=>method==='GET'));
- await $('standings-refresh').click();
- assert.ok(calls.at(-1)[0]==='/api/standings');
- assert.equal(calls.filter(([,method])=>method==='POST').length,1);
  await run("selected='match-id';loadStandings()");
  assert.equal($('standings-panel').hidden,false);
- assert.equal($('standings-refresh').disabled,true);
- assert.equal(calls.filter(([,method])=>method==='POST').length,1);
- console.log('OK: refresh button stays visible; label variants enable it; only a click sends POST');
+ assert.equal(calls.filter(([,method])=>method==='POST').length,0);
+ console.log('OK: no refresh button; classifications are read locally using GET only');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -159,7 +159,7 @@ function render(){const s=data.summary;
  table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
  renderFocus();
 }
-let standingsVersion=0, standingsRefreshing=false;
+let standingsVersion=0;
 function standingsSelection(){
  if(!selected.startsWith('competition:'))return null;
  const [start,name]=JSON.parse(selected.slice(12));
@@ -167,28 +167,19 @@ function standingsSelection(){
  return start==='2026-10-01'&&/^PRIMERA FASE-NIVEL C-(?:0?1|10|11)$/.test(normalized)?{category:category||'',competition:name,competition_date:start}:null;
 }
 function paintStandings(snapshot){
- if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Impórtala desde «Importar datos» o pulsa Refrescar para consultar la web. No se actualiza automáticamente.';return;}
+ if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Impórtala desde «Importar datos». No se actualiza automáticamente.';return;}
  table($('standings-table'),['Pos.','Equipo','PJ','G','P','NP','PF','PC','Puntos'],snapshot.rows.map(r=>[r.position,r.team,r.played,r.won,r.lost,r.not_played,r.points_for,r.points_against,r.points]));
  $('standings-table').querySelectorAll('tbody tr').forEach((tr,i)=>{if(snapshot.rows[i].team.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()==='MVP CERVELLO')tr.classList.add('focus-row');});
  $('standings-status').textContent=`${snapshot.title} · ${snapshot.group}${snapshot.round?' · Jornada '+snapshot.round:''}${snapshot.import_method==='html'?' · Importada desde HTML':''}. Guardada: ${new Date(snapshot.updated_at).toLocaleString('es-ES')}. Actualización exclusivamente manual.`;
 }
 async function loadStandings(){
  const version=++standingsVersion,params=standingsSelection();$('standings-panel').hidden=false;
- $('standings-refresh').disabled=!params||standingsRefreshing;
  $('standings-table').replaceChildren();
- if(!params){$('standings-status').textContent=selected.startsWith('competition:')?'Esta competición no tiene una clasificación configurada. Selecciona la primera fase de Nivel C correspondiente.':'Selecciona «Toda la competición» para consultar la clasificación guardada. El refresco es manual.';return;}
+ if(!params){$('standings-status').textContent=selected.startsWith('competition:')?'Esta competición no tiene una clasificación configurada. Selecciona la primera fase de Nivel C correspondiente.':'Selecciona «Toda la competición» para consultar la clasificación guardada. Actualiza la clasificación desde «Importar datos».';return;}
  $('standings-status').textContent='Leyendo clasificación guardada…';
  try{const result=await api('/api/standings?'+new URLSearchParams(params));if(version===standingsVersion)paintStandings(result.standings);}
  catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
 }
-$('standings-refresh').addEventListener('click',async()=>{
- const params=standingsSelection();if(!params)return;
- const version=standingsVersion,button=$('standings-refresh');standingsRefreshing=true;button.disabled=true;
- $('standings-status').textContent='Consultando la web oficial…';
- try{const result=await api('/api/standings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(params)});if(version===standingsVersion)paintStandings(result.standings);}
- catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
- finally{standingsRefreshing=false;button.disabled=!standingsSelection();}
-});
 async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();await Promise.all([loadStandings(),loadStandingsImportOptions()]);}catch(e){notice(e.message,true);}}
 $('category-select').addEventListener('change',async e=>{category=e.target.value;selected='';await refresh();});
 $('player-select').addEventListener('change',async e=>{player=e.target.value;await refresh();});
