@@ -8,6 +8,7 @@ from stats import norm
 DEFAULT_COMPETITION = 'PRIMERA FASE-NIVEL C-1'
 SOURCES = {
     DEFAULT_COMPETITION: dict(url='https://www.basquetcatala.cat/competicions/resultats/24222', category='C.T. PRE-INFANTIL MASCULI', group=10),
+    'PRIMERA FASE-NIVEL C-08': dict(url='https://www.basquetcatala.cat/competicions/resultats/23926', category='C.T. JUNIOR MASCULI PROMOCIO', group=8, import_category='Junior masculí', import_competition='Primera Fase - Nivell C - 08'),
     'PRIMERA FASE-NIVEL C-11': dict(url='https://www.basquetcatala.cat/competicions/resultats/24360', category='C.T. MINI MASCULI', group=11),
 }
 
@@ -20,6 +21,8 @@ def scope(category, competition, start):
     name = re.sub(r'\s*[-–—]\s*', '-', norm(competition)).replace('NIVELL', 'NIVEL')
     if re.fullmatch(r'PRIMERA FASE-NIVEL C-(?:0?1|10)', name):
         name = DEFAULT_COMPETITION
+    if re.fullmatch(r'PRIMERA FASE-NIVEL C-0?8', name):
+        name = 'PRIMERA FASE-NIVEL C-08'
     if start != '2026-10-01' or name not in SOURCES:
         raise StandingsError('Esta competición no tiene una fuente de clasificación configurada.')
     return [norm(category), start, name]
@@ -66,7 +69,8 @@ class ClassificationParser(HTMLParser):
             return
         if self.subtitle_depth == len(self.stack):
             subtitle = ' '.join(norm(' '.join(self.subtitle)).split())
-            self.correct_group = subtitle == f"PRIMERA FASE - NIVELL C - {self.source['group']}"
+            group = re.fullmatch(r'PRIMERA FASE\s*-\s*NIVELL C\s*-\s*0*(\d+)', subtitle)
+            self.correct_group = bool(group and int(group[1]) == self.source['group'])
             self.subtitle_depth = None
         if self.row_depth == len(self.stack):
             self.rows.append(self.parts)
@@ -109,7 +113,7 @@ def parse_standings(html, competition=DEFAULT_COMPETITION):
     title = ' '.join(parser.title)
     if not rows or not parser.correct_group or source['category'] != norm(title):
         raise StandingsError('No se ha podido leer la clasificación oficial. Puede haber una verificación de seguridad. Se conserva la copia anterior.')
-    return dict(rows=rows, round=parser.round, source_url=source['url'], title=title, group=f"Primera fase · Nivel C · Grupo {source['group']}")
+    return dict(rows=rows, round=parser.round, source_url=source['url'], title=title, group=f"Primera fase · Nivel C · Grupo {source['group']:02d}")
 
 def fetch_standings(competition=DEFAULT_COMPETITION):
     source_url = SOURCES[competition]['url']

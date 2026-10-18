@@ -18,7 +18,7 @@ async function run(code){return vm.runInContext(code,context);}
  await run('loadStandings()');
  assert.equal($('standings-panel').hidden,false);
  assert.equal(calls.length,0);
- for(const name of ['Primera fase - Nivel C - 1','Primera Fase - Nivell C - 10','Primera fase - Nivel C - 01','Primera fase - Nivel C - 11','Primera Fase - Nivell C - 11']){
+ for(const name of ['Primera fase - Nivel C - 1','Primera Fase - Nivell C - 10','Primera fase - Nivel C - 01','Primera fase - Nivel C - 11','Primera Fase - Nivell C - 11','Primera Fase - Nivell C - 08','Primera fase - Nivel C - 8']){
   await run('selected='+JSON.stringify('competition:'+JSON.stringify(['2026-10-01',name]))+';loadStandings()');
   assert.equal($('standings-panel').hidden,false);
  }

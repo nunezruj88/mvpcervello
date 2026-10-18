@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 from wsgiref.simple_server import make_server
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from standings import scope as standings_scope, fetch_standings, parse_standings, StandingsError
+from standings import scope as standings_scope, fetch_standings, parse_standings, StandingsError, SOURCES
 from importer import parse, ImportError
 from stats import summarize, norm, TEAM, team_matches, team_names, player_names, player_key, category_names, category_matches, TRACKED_PLAYERS, is_team
 from stats import competition_matches, scoreboard
@@ -78,6 +78,12 @@ def standings_import_options():
             except StandingsError:
                 continue
             options.setdefault(key, destination)
+    # Make the newly configured junior destination available before its first match.
+    for competition, source in SOURCES.items():
+        if source.get('import_category') and not any(json.loads(key)[2] == competition for key in options):
+            destination = dict(category=source['import_category'], competition=source['import_competition'], competition_date='2026-10-01')
+            key = json.dumps(standings_scope(destination['category'], destination['competition'], destination['competition_date']))
+            options[key] = destination
     return sorted(options.values(), key=lambda v: (norm(v['category']), v['competition_date'], norm(v['competition'])))
 
 def application(env, start_response):

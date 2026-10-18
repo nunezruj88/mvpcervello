@@ -164,7 +164,7 @@ function standingsSelection(){
  if(!selected.startsWith('competition:'))return null;
  const [start,name]=JSON.parse(selected.slice(12));
  const normalized=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim().replace(/\s*[-–—]\s*/g,'-').replace('NIVELL','NIVEL');
- return start==='2026-10-01'&&/^PRIMERA FASE-NIVEL C-(?:0?1|10|11)$/.test(normalized)?{category:category||'',competition:name,competition_date:start}:null;
+ return start==='2026-10-01'&&/^PRIMERA FASE-NIVEL C-(?:0?1|0?8|10|11)$/.test(normalized)?{category:category||'',competition:name,competition_date:start}:null;
 }
 function paintStandings(snapshot){
  if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Impórtala desde «Importar datos». No se actualiza automáticamente.';return;}

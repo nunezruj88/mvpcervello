@@ -51,6 +51,12 @@ class StandingsTests(unittest.TestCase):
         with self.assertRaises(StandingsError):
             scope('Preinfantil', 'Primera fase - Nivel C - 2', '2026-10-01')
 
+    def test_junior_group_names_share_scope(self):
+        names = ['Primera Fase - Nivell C - 08', 'Primera fase - Nivel C - 8']
+        keys = [scope('Junior masculí', name, '2026-10-01') for name in names]
+        self.assertEqual(keys[0], keys[1])
+        self.assertEqual(keys[0][2], 'PRIMERA FASE-NIVEL C-08')
+
     def test_group_11_uses_own_category_and_source(self):
         mini = HTML.replace('Pre-infantil', 'Mini').replace('Nivell C - 10', 'Nivell C - 11')
         parsed = parse_standings(mini, 'PRIMERA FASE-NIVEL C-11')

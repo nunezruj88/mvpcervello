@@ -10,6 +10,7 @@ import app
 from test_standings import HTML
 
 MINI_HTML = HTML.replace('Pre-infantil', 'Mini').replace('Nivell C - 10', 'Nivell C -  11')
+JUNIOR_HTML = HTML.replace('C.t. Pre-infantil Masculí', 'C.t. Júnior Masculí Promoció').replace('Nivell C - 10', 'Nivell C -  08')
 
 class StandingsImportTests(unittest.TestCase):
     def setUp(self):
@@ -48,9 +49,35 @@ class StandingsImportTests(unittest.TestCase):
 
     def test_options_use_all_local_categories(self):
         options = self.call('/api/standings/options', 'GET')['body']['options']
-        self.assertEqual(len(options), 2)
+        self.assertEqual(len(options), 3)
         self.assertIn(self.destination, options)
         self.assertIn(self.preinfantil, options)
+
+    def test_junior_destination_available_without_matches_and_saved_separately(self):
+        options = self.call('/api/standings/options', 'GET')['body']['options']
+        junior = next(o for o in options if o['competition'].endswith('08'))
+        self.assertEqual(junior['category'], 'Junior masculí')
+        raw = base64.b64encode(JUNIOR_HTML.encode()).decode()
+        result = self.call(payload=junior | dict(filename='junior.html', data=raw, preview=True))
+        self.assertEqual(result['status'], '200 OK')
+        self.assertTrue(result['body']['standings']['source_url'].endswith('/23926'))
+        self.assertEqual(self.call(payload=junior | dict(filename='junior.html', data=raw))['status'], '201 Created')
+        self.assertEqual(self.saved(junior)['group'], 'Primera fase · Nivel C · Grupo 08')
+        self.assertIsNone(self.saved())
+        self.assertIsNone(self.saved(self.preinfantil))
+
+    def test_existing_junior_match_destination_is_reused_without_duplicate(self):
+        match = dict(id='junior', date='2026-10-03', home='MVP CERVELLÓ', away='Rival', competition='Primera fase - Nivel C - 8', competition_date='2026-10-01', events=[dict(team='MVP CERVELLÓ', category='Júnior masculí')])
+        with app.connect() as con:
+            con.execute('INSERT INTO matches VALUES (?,?)', (match['id'], json.dumps(match)))
+        options = self.call('/api/standings/options', 'GET')['body']['options']
+        self.assertEqual(len(options), 3)
+        self.assertEqual(sum(o['competition'] == 'Primera fase - Nivel C - 8' for o in options), 1)
+
+    def test_mini_html_cannot_replace_junior_classification(self):
+        junior = dict(category='Junior masculí', competition='Primera Fase - Nivell C - 08', competition_date='2026-10-01')
+        result = self.call(payload=self.payload(**junior, preview=True))
+        self.assertEqual(result['status'], '400 Bad Request')
 
     def test_preview_never_persists_or_archives(self):
         result = self.call(payload=self.payload(preview=True))
