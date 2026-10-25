@@ -26,7 +26,7 @@ function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-
 function playingTimeText(p){const seconds=p.playing_seconds;const value=seconds==null?'—':`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;return value+(p.playing_time_complete?'':' (incompletos)');}
 function playingTimeCell(p){const cell=el('span',playingTimeText(p));cell.title=(p.playing_time_issues||[]).join(' · ')||'Tiempo confirmado por entradas y salidas';return cell;}
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
-let playerSort={column:3,direction:-1};
+let playerSort={column:2,direction:-1};
 function renderPlayers(){
  const headers=['Jugador','Dorsal','MVP','PTS','TL','T2','T3','Faltas','Minutos registrados'];
  const keys=['name','number','mvp_score','points','made1','made2','made3','fouls','playing_seconds'];

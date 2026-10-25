@@ -85,9 +85,10 @@ function fixture(category, points, competition='', start='', matchDate='2026-10-
   assert.ok((await page.locator('#team-fouls p').first().textContent()).startsWith('CB BEGUES – MVP Cervelló'));
   assert.deepEqual(await page.locator('#period-legend span').allTextContents(),['CB BEGUES','MVP Cervelló']);
   assert.equal(await page.locator('#team-fouls + .timeout-card').count(),1);
-  assert.deepEqual(await page.locator('#players-table th button').allTextContents(),['Jugador ↕','Dorsal ↕','MVP ↕','PTS ↓','TL ↕','T2 ↕','T3 ↕','Faltas ↕','Minutos registrados ↕']);
+  assert.deepEqual(await page.locator('#players-table th button').allTextContents(),['Jugador ↕','Dorsal ↕','MVP ↓','PTS ↕','TL ↕','T2 ↕','T3 ↕','Faltas ↕','Minutos registrados ↕']);
   assert.deepEqual(await page.locator('#timeouts .bar-row strong').allTextContents(),['2','1']);
   assert.ok(!(await page.locator('#players-table').textContent()).includes('EQUIPO'));
+  await page.locator('#players-table th').nth(3).locator('button').click();
   await page.locator('#players-table th').nth(3).locator('button').click();
   assert.deepEqual(await page.locator('#players-table tbody tr td:nth-child(4)').allTextContents(),['1','3']);
   assert.equal(await page.locator('#players-table th').nth(3).getAttribute('aria-sort'),'ascending');
