@@ -26,24 +26,24 @@ function bar(label,sub,value,max,focus=false){const row=el('div',undefined,'bar-
 function playingTimeText(p){const seconds=p.playing_seconds;const value=seconds==null?'—':`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;return value+(p.playing_time_complete?'':' (incompletos)');}
 function playingTimeCell(p){const cell=el('span',playingTimeText(p));cell.title=(p.playing_time_issues||[]).join(' · ')||'Tiempo confirmado por entradas y salidas';return cell;}
 function shotCell(p,n){return `${p['made'+n]}/${p['attempts'+n]}`;}
-let playerSort={column:2,direction:-1};
+let playerSort={column:3,direction:-1};
 function renderPlayers(){
- const headers=['Jugador','Dorsal','PTS','TL','T2','T3','Faltas','Minutos registrados'];
- const keys=['name','number','points','made1','made2','made3','fouls','playing_seconds'];
+ const headers=['Jugador','Dorsal','MVP','PTS','TL','T2','T3','Faltas','Minutos registrados'];
+ const keys=['name','number','mvp_score','points','made1','made2','made3','fouls','playing_seconds'];
  const {column,direction}=playerSort;
  const players=[...data.summary.players].sort((a,b)=>{
   const av=a[keys[column]],bv=b[keys[column]];
   if(av==null||bv==null)return av==bv?0:av==null?1:-1;
   let result=column===0?av.localeCompare(bv,'es',{numeric:true,sensitivity:'base'}):av-bv;
-  if(!result&&column>=3&&column<=5)result=a['attempts'+(column-2)]-b['attempts'+(column-2)];
+  if(!result&&column>=4&&column<=6)result=a['attempts'+(column-3)]-b['attempts'+(column-3)];
   return result*direction||a.name.localeCompare(b.name,'es',{sensitivity:'base'});
  });
- table($('players-table'),headers,players.map(p=>[p.name,p.number,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,playingTimeCell(p)]),1);
+ table($('players-table'),headers,players.map(p=>[p.name,p.number,p.mvp_score,p.points,shotCell(p,1),shotCell(p,2),shotCell(p,3),p.fouls,playingTimeCell(p)]),1);
  $('players-table').querySelectorAll('th').forEach((th,i)=>{
   const active=i===column;
   th.setAttribute('scope','col');th.setAttribute('aria-sort',active?(direction===1?'ascending':'descending'):'none');
   const button=el('button',headers[i]+(active?(direction===1?' ↑':' ↓'):' ↕'),'sort-column');
-  button.title=i>=3&&i<=5?'Ordenar por aciertos; en empate, por intentos':'Ordenar por '+headers[i];
+  button.title=i===2?'Puntos + tiros acertados − tiros fallados − faltas. Ordenar por valoración MVP':i>=4&&i<=6?'Ordenar por aciertos; en empate, por intentos':'Ordenar por '+headers[i];
   button.addEventListener('click',()=>{playerSort={column:i,direction:active?-direction:i===0||i===1?1:-1};renderPlayers();});
   th.replaceChildren(button);
  });
@@ -254,6 +254,7 @@ $('standings-import-save').addEventListener('click',async()=>{
  finally{standingsImportBusy=false;$('standings-import-save').disabled=false;$('standings-preview-button').disabled=false;$('standings-file').disabled=false;$('standings-destination').disabled=false;}
 });
 show(['team','player','upload'].includes(location.hash.slice(1))?location.hash.slice(1):'team');refresh();
+
 
 
 

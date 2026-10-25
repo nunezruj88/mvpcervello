@@ -67,6 +67,13 @@ def category_matches(matches, category):
         result.append(dict(m, events=events, complete=m['complete'] and not reduced))
     return result
 
+def mvp_score(stats):
+    """Shared rating for the MVP selection and every player's table row."""
+    made = sum(stats[f'made{n}'] for n in (1, 2, 3))
+    missed = sum(stats[f'attempts{n}'] for n in (1, 2, 3)) - made
+    return stats['points'] + made - missed - stats['fouls']
+
+
 def event_stats(events):
     result = dict(points=0, fouls=0, made1=0, missed1=0, made2=0, missed2=0,
                   made3=0, missed3=0, rebounds=0, assists=0, steals=0, turnovers=0, blocks=0, timeouts=0, events=0)
@@ -87,6 +94,7 @@ def event_stats(events):
         attempted = result[f'made{n}'] + result[f'missed{n}']
         result[f'attempts{n}'] = attempted
         result[f'percent{n}'] = round(100 * result[f'made{n}'] / attempted, 1) if attempted else None
+    result['mvp_score'] = mvp_score(result)
     return result
 
 def playing_time(matches, team, player):
@@ -107,7 +115,7 @@ def select_mvp(players):
         attempts = sum(p[f'attempts{n}'] for n in (1, 2, 3))
         if not attempts:
             continue
-        score = p['points'] + made - (attempts - made) - p['fouls']
+        score = mvp_score(p)
         efficiency = made / attempts
         candidates.append((score, efficiency, p['points'], -p['fouls'], p))
     if not candidates:
@@ -162,4 +170,5 @@ def summarize(matches, team=TEAM, player='MNL'):
                             focus_points=sum(e['points'] for e in fs)))
     return dict(team=event_stats(events), opponent=event_stats(opponent_events), players=ranking, mvp=select_mvp(ranking), focus=dict(event_stats(focus), **playing_time(matches, team, player)), focus_events=focus,
                 periods=periods, trend=trend, matches=len(matches), partial=sum(not m['complete'] for m in matches))
+
 
