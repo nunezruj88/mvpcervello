@@ -30,8 +30,11 @@ def playing_time(matches, team, player, normalize, identity):
             warn('duración del período desconocida')
             continue
         periods = sorted({int(e['period'][1:]) for e in events})
+        # In four/eight-period games an open last stint runs to the final
+        # buzzer, even when the import omits the closing event or is partial.
+        final_period = periods[-1] if periods[-1] in (4, 8) else None
         state, last_period = None, 0
-        if not match.get('complete'):
+        if not match.get('complete') and final_period is None:
             warn('archivo parcial; el tiempo representa solo los intervalos confirmados')
         for period in periods:
             if period != last_period + 1:
@@ -82,7 +85,7 @@ def playing_time(matches, team, player, normalize, identity):
                         if clock != duration:
                             warn(f'P{period}: salida repetida sin entrada')
                     state, start = False, None
-            ended = period < periods[-1] or match.get('complete') or any(
+            ended = period == final_period or period < periods[-1] or match.get('complete') or any(
                 normalize(e['action']).startswith('FINAL') for e in rows)
             if state is True:
                 if ended:
@@ -99,3 +102,4 @@ def playing_time(matches, team, player, normalize, identity):
     return dict(playing_seconds=total if known else None,
                 playing_time_complete=relevant and known and not issues,
                 playing_time_issues=issues)
+
