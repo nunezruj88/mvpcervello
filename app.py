@@ -1,5 +1,6 @@
 """WSGI application; Gunicorn behind authenticated Nginx in production."""
 import base64
+import hashlib
 import csv
 import io
 import json
@@ -105,6 +106,37 @@ def application(env, start_response):
             try: payload = json.loads(env['wsgi.input'].read(length))
             except (ValueError, UnicodeDecodeError): raise ImportError('Petición inválida.')
         if path == '/health' and method == 'GET': return reply({'status':'ok'})
+        if path == '/api/matches' and method == 'GET':
+            with connect() as con:
+                saved = con.execute('SELECT body FROM matches').fetchall()
+            result = []
+            for (body,) in saved:
+                m = json.loads(body)
+                result.append(brief(m) | dict(
+                    category=m.get('category') or next(iter(category_names([m])), ''),
+                    players=[p['id'] for p in player_names([m], TEAM) if p['id'] in {'MNL', 'ELN'}],
+                    revision=hashlib.sha256(body.encode()).hexdigest()))
+            return reply({'matches': sorted(result, key=lambda m: (m['date'], m['id']), reverse=True)})
+        if path == '/api/matches/delete' and method == 'POST':
+            if not isinstance(payload, dict) or payload.get('confirm') is not True:
+                raise ImportError('Confirma el partido que quieres borrar.')
+            match_id, revision = payload.get('id'), payload.get('revision')
+            if not isinstance(match_id, str) or not re.fullmatch(r'[0-9a-f]{24}', match_id):
+                raise ImportError('Identificador de partido inválido.')
+            if not isinstance(revision, str) or not re.fullmatch(r'[0-9a-f]{64}', revision):
+                raise ImportError('Vuelve a cargar la lista antes de borrar.')
+            with connect() as con:
+                con.execute('BEGIN IMMEDIATE')
+                row = con.execute('SELECT body FROM matches WHERE id=?', (match_id,)).fetchone()
+                if not row:
+                    return reply({'error': 'El partido ya no existe. Actualiza la lista.'}, '404 Not Found')
+                if hashlib.sha256(row[0].encode()).hexdigest() != revision:
+                    return reply({'error': 'El partido ha cambiado. Revisa la lista y confirma de nuevo.'}, '409 Conflict')
+                con.execute('CREATE TABLE IF NOT EXISTS deleted_matches (id INTEGER PRIMARY KEY, match_id TEXT NOT NULL, body TEXT NOT NULL, deleted_at TEXT NOT NULL)')
+                con.execute('INSERT INTO deleted_matches (match_id,body,deleted_at) VALUES (?,?,?)',
+                            (match_id, row[0], datetime.now(timezone.utc).isoformat()))
+                con.execute('DELETE FROM matches WHERE id=?', (match_id,))
+            return reply({'deleted': match_id})
         if path == '/api/standings/options' and method == 'GET':
             return reply({'options': standings_import_options()})
         if path == '/api/standings/import' and method == 'POST':
@@ -262,4 +294,5 @@ if __name__=='__main__':
     port=int(os.environ.get('MVP_PORT','8092'))
     print(f'MVP Cervelló: http://127.0.0.1:{port}',flush=True)
     with make_server('127.0.0.1',port,application) as server: server.serve_forever()
+
 

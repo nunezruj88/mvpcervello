@@ -166,7 +166,7 @@ El servicio utiliza `ProtectSystem=strict`; la nueva directiva `ReadWritePaths` 
 
 ## Clasificación oficial guardada
 
-En **Estadísticas del equipo**, selecciona **Toda la competición · 01/10/2026 - Primera fase - Nivel C - 1** para ver la clasificación guardada en SQLite. La clasificación se actualiza importando una página HTML desde **Importar datos → Importar clasificación**. En la vista del equipo se lee la copia local; no hay botón de consulta externa. Se reconocen las variantes Nivel/Nivell y 1/01/10 para esta asociación. Abrir la página, cambiar de jugador/categoría/partido o reiniciar el servicio **nunca consulta la web externa**. No hay tareas programadas ni temporizadores de actualización.
+En **Estadísticas del equipo**, selecciona **Toda la competición · 01/10/2026 - Primera fase - Nivel C - 1** para ver la clasificación guardada en SQLite. La clasificación se actualiza importando una página HTML desde **Gestionar datos → Importar clasificación**. En la vista del equipo se lee la copia local; no hay botón de consulta externa. Se reconocen las variantes Nivel/Nivell y 1/01/10 para esta asociación. Abrir la página, cambiar de jugador/categoría/partido o reiniciar el servicio **nunca consulta la web externa**. No hay tareas programadas ni temporizadores de actualización.
 
 La opción indicada se asocia expresamente a https://www.basquetcatala.cat/competicions/resultats/24222, que la federación identifica como **C.T. Pre-infantil Masculí · Primera fase · Nivel C · Grupo 10**. El nombre importado «Nivel C - 1» se mantiene; la tabla muestra el grupo real de la fuente para evitar confusiones. La opción **01/10/2026 - Primera fase - Nivel C - 11** se asocia a https://www.basquetcatala.cat/competicions/resultats/24360 (**C.T. Mini Masculí · Primera fase · Nivel C · Grupo 11**). Cada competición consulta su propia fuente y conserva su propia copia en SQLite. También está configurada **Primera Fase - Nivell C - 08**, correspondiente a **C.T. Júnior Masculí Promoció**, fuente `23926`. Se admiten los nombres Nivel/Nivell y grupo 8/08. El destino **Junior masculí · 01/10/2026 · Primera Fase - Nivell C - 08** aparece en la importación aunque todavía no haya partidos de esa competición; si hay partidos con esa asociación, se usa su categoría y nombre guardados. Otras competiciones necesitan una asociación propia.
 
@@ -181,12 +181,12 @@ cd /var/www/mvp-cervello
 git pull --ff-only origin main && systemctl restart mvp-cervello
 ```
 
-## Importar datos: partidos y clasificaciones HTML
+## Gestionar datos: partidos y clasificaciones HTML
 
-La sección antes llamada **Cargar partido** ahora se llama **Importar datos** y reúne las importaciones manuales. Mantiene la carga de partidos CSV/Excel y añade el formulario **Importar clasificación**.
+La sección antes llamada **Cargar partido** ahora se llama **Gestionar datos** y reúne las importaciones manuales. Mantiene la carga de partidos CSV/Excel y añade el formulario **Importar clasificación**.
 
 1. Abre la clasificación oficial en tu navegador y guarda la página como HTML (`Ctrl+S`). Se admiten `.html` y `.htm`, hasta 10 MB. No hace falta subir la carpeta de recursos que pueda crear el navegador.
-2. En **Importar datos → Importar clasificación**, elige la categoría y competición de destino. El formulario ofrece las competiciones configuradas presentes en los partidos guardados, independientemente del jugador y de los filtros superiores. El destino de Júnior C-08 está disponible desde el inicio; los demás destinos se obtienen de los partidos guardados.
+2. En **Gestionar datos → Importar clasificación**, elige la categoría y competición de destino. El formulario ofrece las competiciones configuradas presentes en los partidos guardados, independientemente del jugador y de los filtros superiores. El destino de Júnior C-08 está disponible desde el inicio; los demás destinos se obtienen de los partidos guardados.
 3. Selecciona el HTML y pulsa **Revisar clasificación**. Se comprueban la categoría oficial y el grupo del archivo; la tabla muestra posición, equipos, partidos, victorias, derrotas, no presentados, PF, PC y puntos. Se conserva la jornada indicada en la página.
 4. Pulsa **Guardar clasificación**. Si existe una clasificación para ese destino, confirma **Reemplazar**. La revisión no guarda datos ni crea copias.
 5. En **Estadísticas del equipo**, selecciona esa categoría y **Toda la competición** para leer la clasificación guardada. La fecha mostrada corresponde al guardado; los resultados corresponden a la página que descargaste.
@@ -194,4 +194,16 @@ La sección antes llamada **Cargar partido** ahora se llama **Importar datos** y
 El formulario procesa solo el HTML subido: no ejecuta sus scripts, no abre enlaces, no carga recursos y no consulta la web. Guarda la tabla en SQLite y una copia exacta del HTML en `partidos/`, con nombre único; los reemplazos conservan los originales anteriores. Si falla la validación, el archivo o SQLite, se mantiene la clasificación anterior. La vista del equipo solo muestra los datos guardados; las actualizaciones se realizan mediante este formulario. No hay actualizaciones automáticas.
 
 La importación de clasificaciones no modifica las acciones ni las estadísticas de los partidos. No requiere dependencias nuevas, migraciones manuales ni cambios de permisos si ya está habilitada la carpeta `partidos`. Las nuevas pruebas incluyen `python -m unittest discover -s tests`, `node tests/test_standings_frontend.cjs` y `node tests/test_standings_import_frontend.cjs`.
+
+
+
+## Borrar partidos desde Gestionar datos
+
+La sección **Gestionar datos** reúne las importaciones y la lista completa de **Partidos guardados**, independientemente del jugador, categoría y competición seleccionados arriba. La lista muestra fecha, equipos, categoría (incluida «Sin categoría»), competición, cobertura, acciones y archivo. Puedes descargar el CSV, consultar estadísticas o pulsar **Borrar partido**.
+
+Antes de borrar se pide confirmación con los datos del partido. Para quitar una copia duplicada sin categoría, elige únicamente su fila «Sin categoría». Al confirmar se elimina ese identificador de las estadísticas y se actualizan los selectores; la copia de la categoría correcta no se modifica. Si el partido fue reemplazado desde que cargaste la lista, el borrado se rechaza y hay que revisarlo de nuevo.
+
+El borrado conserva el fichero original en `partidos/` y una copia completa del registro en la tabla SQLite `deleted_matches`, dentro de la misma transacción. Las clasificaciones guardadas se mantienen. La copia permite recuperación administrativa; todavía no hay botón de restaurar. No se borran partidos por cargar la página ni por cambiar filtros.
+
+Pruebas de esta función: `python -m unittest discover -s tests -p test_delete.py` y `node tests/test_delete_ui.cjs`.
 

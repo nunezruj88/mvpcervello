@@ -5,7 +5,7 @@
 <aside class="sidebar" id="sidebar">
   <a class="brand" href="/"><span class="ball">◉</span><span>MVP<span class="brand-sub">CERVELLÓ</span></span></a>
   <p class="nav-label">CUADERNO DE EQUIPO</p>
-  <nav aria-label="Secciones"><button data-view="team" class="active">◫ <span>Estadísticas del equipo</span></button><button data-view="player">◎ <span>Estadísticas del jugador</span></button><button data-view="upload">↑ <span>Importar datos</span></button></nav>
+  <nav aria-label="Secciones"><button data-view="team" class="active">◫ <span>Estadísticas del equipo</span></button><button data-view="player">◎ <span>Estadísticas del jugador</span></button><button data-view="upload">↑ <span>Gestionar datos</span></button></nav>
   <div class="side-bottom"><span class="status-dot"></span> Datos guardados en el servidor<p>Cada jugada cuenta.</p></div>
 </aside>
 <main>
@@ -15,7 +15,7 @@
   <section id="team" class="view">
     <div class="heading"><div><p class="eyebrow">VISIÓN DE EQUIPO</p><h1>El partido, en números.</h1></div></div>
     <div id="team-empty" class="empty" hidden><span class="empty-ball">◉</span><h2>Tu primer partido empieza aquí</h2><p>Sube el Excel o CSV extraído de una grabación para ver las estadísticas.</p><button class="primary" data-view="upload">Cargar un partido →</button></div>
-    <article id="standings-panel" class="panel"><div class="panel-heading"><div><p class="eyebrow">CLASIFICACIÓN OFICIAL</p><h2>Clasificación de la liga</h2></div></div><p id="standings-status" role="status">Selecciona «Toda la competición» para consultar la clasificación guardada. Actualiza la clasificación desde «Importar datos».</p><div id="standings-table" class="table-wrap"></div></article>
+    <article id="standings-panel" class="panel"><div class="panel-heading"><div><p class="eyebrow">CLASIFICACIÓN OFICIAL</p><h2>Clasificación de la liga</h2></div></div><p id="standings-status" role="status">Selecciona «Toda la competición» para consultar la clasificación guardada. Actualiza la clasificación desde «Gestionar datos».</p><div id="standings-table" class="table-wrap"></div></article>
     <div id="team-content"><div id="team-kpis" class="kpis"></div>
       <div class="grid" id="match-charts"><article class="panel"><div class="panel-heading"><div><p class="eyebrow">ANOTACIÓN</p><h2>Puntos por jugador</h2></div><span class="chip">Acciones subidas</span></div><div id="ranking" class="bars"></div></article>
       <article class="panel"><p class="eyebrow">RITMO DEL PARTIDO</p><h2>Puntos por período</h2><div id="period-legend" class="period-legend"></div><div id="periods" class="columns"></div></article></div>
@@ -33,7 +33,7 @@
   </section>
   <section id="upload" class="view" hidden>
     <div id="upload-notice" class="coverage complete" role="status" hidden></div>
-    <div class="heading"><div><p class="eyebrow">IMPORTACIONES MANUALES</p><h1>Importar datos</h1><p class="muted">Añade partidos y clasificaciones. Revisa cada archivo antes de guardarlo.</p></div></div>
+    <div class="heading"><div><p class="eyebrow">GESTIÓN DE DATOS</p><h1>Gestionar datos</h1><p class="muted">Importa partidos y clasificaciones, o elimina partidos guardados.</p></div></div>
     <div class="grid upload-grid"><article class="panel"><p class="eyebrow">01 / SELECCIONA EL ARCHIVO</p><h2>Añadir un partido</h2>
     <form id="upload-form"><label class="dropzone" id="dropzone"><span class="upload-icon">↑</span><strong id="file-label">Selecciona o arrastra tu archivo</strong><span>Excel .xlsx o CSV · Máximo 10 MB</span><input id="file" type="file" accept=".xlsx,.csv" required></label>
     <label class="check"><input id="complete" type="checkbox"><span>El archivo contiene todas las acciones del partido completo</span></label><p class="footnote">Deja esta casilla desmarcada para fragmentos. Subir otro archivo del mismo partido reemplaza sus acciones; no une fragmentos.</p>
@@ -58,11 +58,12 @@
       </div>
       <p class="footnote">La importación usa únicamente el archivo que seleccionas y guarda una copia original. No consulta la web. La clasificación queda disponible al seleccionar «Toda la competición» en Estadísticas del equipo.</p>
     </article>
-    <article class="panel"><p class="eyebrow">TUS IMPORTACIONES</p><h2>Partidos guardados</h2><div id="matches-table" class="table-wrap"></div></article>
+    <article class="panel"><p class="eyebrow">TUS IMPORTACIONES</p><h2>Partidos guardados</h2><p class="muted">Todos los partidos, independientemente de los filtros superiores. Comprueba la categoría antes de borrar un duplicado.</p><button id="reload-matches" type="button">Actualizar lista</button><p id="matches-status" role="status" hidden></p><div id="matches-table" class="table-wrap"></div></article>
   </section>
   <footer>MVP CERVELLÓ <span>Estadísticas a partir de tus jugadas.</span></footer>
 </main>
 </body></html>
+
 
 
 

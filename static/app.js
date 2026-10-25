@@ -156,7 +156,6 @@ function render(){const s=data.summary;
  renderCompetition();
  renderPlayers();
  $('export-team').href='/api/export?'+selectionQuery();
- table($('matches-table'),['Fecha','Partido','Cobertura','Acciones','Archivo',''],data.matches.map(m=>{const b=el('button','Ver estadísticas','primary');b.addEventListener('click',async()=>{selected=m.id;show('team');await refresh();});return [date(m.date),m.home+' – '+m.away,badge(m.complete),m.event_count,m.filename,b];}));
  renderFocus();
 }
 let standingsVersion=0;
@@ -167,7 +166,7 @@ function standingsSelection(){
  return start==='2026-10-01'&&/^PRIMERA FASE-NIVEL C-(?:0?1|0?8|10|11)$/.test(normalized)?{category:category||'',competition:name,competition_date:start}:null;
 }
 function paintStandings(snapshot){
- if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Impórtala desde «Importar datos». No se actualiza automáticamente.';return;}
+ if(!snapshot){$('standings-table').replaceChildren();$('standings-status').textContent='No hay clasificación guardada. Impórtala desde «Gestionar datos». No se actualiza automáticamente.';return;}
  table($('standings-table'),['Pos.','Equipo','PJ','G','P','NP','PF','PC','Puntos'],snapshot.rows.map(r=>[r.position,r.team,r.played,r.won,r.lost,r.not_played,r.points_for,r.points_against,r.points]));
  $('standings-table').querySelectorAll('tbody tr').forEach((tr,i)=>{if(snapshot.rows[i].team.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()==='MVP CERVELLO')tr.classList.add('focus-row');});
  $('standings-status').textContent=`${snapshot.title} · ${snapshot.group}${snapshot.round?' · Jornada '+snapshot.round:''}${snapshot.import_method==='html'?' · Importada desde HTML':''}. Guardada: ${new Date(snapshot.updated_at).toLocaleString('es-ES')}. Actualización exclusivamente manual.`;
@@ -175,12 +174,42 @@ function paintStandings(snapshot){
 async function loadStandings(){
  const version=++standingsVersion,params=standingsSelection();$('standings-panel').hidden=false;
  $('standings-table').replaceChildren();
- if(!params){$('standings-status').textContent=selected.startsWith('competition:')?'Esta competición no tiene una clasificación configurada. Selecciona la primera fase de Nivel C correspondiente.':'Selecciona «Toda la competición» para consultar la clasificación guardada. Actualiza la clasificación desde «Importar datos».';return;}
+ if(!params){$('standings-status').textContent=selected.startsWith('competition:')?'Esta competición no tiene una clasificación configurada. Selecciona la primera fase de Nivel C correspondiente.':'Selecciona «Toda la competición» para consultar la clasificación guardada. Actualiza la clasificación desde «Gestionar datos».';return;}
  $('standings-status').textContent='Leyendo clasificación guardada…';
  try{const result=await api('/api/standings?'+new URLSearchParams(params));if(version===standingsVersion)paintStandings(result.standings);}
  catch(e){if(version===standingsVersion)$('standings-status').textContent=e.message;}
 }
-async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();await Promise.all([loadStandings(),loadStandingsImportOptions()]);}catch(e){notice(e.message,true);}}
+let deletingMatch=false, managedMatchesVersion=0;
+function matchesStatus(message){$('matches-status').textContent=message;$('matches-status').hidden=!message;}
+async function loadManagedMatches(){
+ const version=++managedMatchesVersion;
+ try{
+  const result=await api('/api/matches');if(version!==managedMatchesVersion)return;
+  table($('matches-table'),['Fecha','Partido','Categoría','Competición','Cobertura','Acciones','Archivo','Opciones'],result.matches.map(m=>{
+   const actions=el('div'),view=el('button','Ver estadísticas'),download=el('a','Descargar CSV','text-link'),remove=el('button','Borrar partido');
+   view.type=remove.type='button';remove.disabled=deletingMatch;view.disabled=!m.players.length;
+   view.addEventListener('click',async()=>{player=m.players.includes(player)?player:m.players[0];category=m.category;selected=m.id;show('team');await refresh();});
+   download.href='/api/export?'+new URLSearchParams({match:m.id});
+   remove.addEventListener('click',()=>deleteManagedMatch(m));
+   actions.append(view,download,remove);
+   return [date(m.date),m.home+' – '+m.away,m.category||'Sin categoría',m.competition||'Sin competición',badge(m.complete),m.event_count,m.filename,actions];
+  }));
+ }catch(e){if(version===managedMatchesVersion)matchesStatus('No se ha podido cargar la lista: '+e.message);}
+}
+async function deleteManagedMatch(m){
+ if(deletingMatch)return;
+ const description=`${date(m.date)} · ${m.home} – ${m.away}\nCategoría: ${m.category||'Sin categoría'}\nCompetición: ${m.competition||'Sin competición'}\nArchivo: ${m.filename}\nAcciones: ${m.event_count}`;
+ if(!window.confirm(`¿Borrar este partido?\n\n${description}\n\nSe eliminará de las estadísticas. Se conserva una copia de recuperación y el archivo original.`))return;
+ deletingMatch=true;$('reload-matches').disabled=true;matchesStatus('Borrando partido…');
+ try{
+  await api('/api/matches/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:m.id,revision:m.revision,confirm:true})});
+  if(selected===m.id)selected='';
+  resetPreview();await refresh();matchesStatus('Partido borrado. Estadísticas y categorías actualizadas.');
+ }catch(e){matchesStatus(e.message);}
+ finally{deletingMatch=false;$('reload-matches').disabled=false;await loadManagedMatches();}
+}
+$('reload-matches').addEventListener('click',()=>{matchesStatus('');loadManagedMatches();});
+async function refresh(){try{const query=selectionQuery();query.set('player',player);data=await api('/api/data?'+query);category=data.selected_category;player=data.selected_player;selected=data.selected_scope||'';render();await Promise.all([loadStandings(),loadStandingsImportOptions(),loadManagedMatches()]);}catch(e){notice(e.message,true);}}
 $('category-select').addEventListener('change',async e=>{category=e.target.value;selected='';await refresh();});
 $('player-select').addEventListener('change',async e=>{player=e.target.value;await refresh();});
 for(const id of ['team-match'])$(id).addEventListener('change',async e=>{selected=e.target.value;await refresh();});
@@ -254,6 +283,7 @@ $('standings-import-save').addEventListener('click',async()=>{
  finally{standingsImportBusy=false;$('standings-import-save').disabled=false;$('standings-preview-button').disabled=false;$('standings-file').disabled=false;$('standings-destination').disabled=false;}
 });
 show(['team','player','upload'].includes(location.hash.slice(1))?location.hash.slice(1):'team');refresh();
+
 
 
 
