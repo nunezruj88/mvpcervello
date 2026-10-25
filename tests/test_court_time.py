@@ -86,10 +86,30 @@ class CourtTimeTests(unittest.TestCase):
         self.assertIsNone(s['playing_seconds'])
         self.assertFalse(s['playing_time_complete'])
 
-    def test_entry_midperiod_retains_only_confirmed_interval(self):
+    def test_first_entry_midperiod_implies_bench_start(self):
         s = self.calculate([event('04:00', 'Entra al camp'), event('02:00', 'Surt del camp')])
         self.assertEqual(s['playing_seconds'], 120)
+        self.assertTrue(s['playing_time_complete'])
+
+    def test_actions_before_first_entry_keep_missing_interval_warning(self):
+        s = self.calculate([event('05:00', 'Cistella de 2'),
+                            event('04:00', 'Entra al camp'), event('02:00', 'Surt del camp')])
+        self.assertEqual(s['playing_seconds'], 120)
         self.assertFalse(s['playing_time_complete'])
+        self.assertTrue(any('acciones anteriores' in issue for issue in s['playing_time_issues']))
+
+    def test_eln_stints_across_four_periods_are_complete(self):
+        events = [event('05:52', 'Entra al camp'),
+                  event('10:00', 'Surt del camp', 'P2'),
+                  event('07:00', 'Entra al camp', 'P2'),
+                  event('02:00', 'Personal, 2a falta', 'P2'),
+                  event('10:00', 'Surt del camp', 'P3'),
+                  event('04:49', 'Entra al camp', 'P4'),
+                  event('01:39', 'Cistella de 2', 'P4')]
+        s = self.calculate(events, duration=600, complete=False)
+        self.assertEqual(s['playing_seconds'], 5*60+52 + 7*60 + 4*60+49)
+        self.assertTrue(s['playing_time_complete'])
+        self.assertEqual(s['playing_time_issues'], [])
 
     def test_multiple_stints_and_match_aggregation(self):
         m = match([event('06:00', 'Entra al camp'), event('04:00', 'Surt del camp'),

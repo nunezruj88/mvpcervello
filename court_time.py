@@ -43,10 +43,11 @@ def playing_time(matches, team, player, normalize, identity):
             last_period = period
             rows = [e for e in events if e['period'] == f'P{period}']
             bench_start_known = state is False
-            changes = [e for e in rows if own(e) and normalize(e['action']).startswith(('ENTRA', 'SURT'))]
+            changes = [(i, e) for i, e in enumerate(rows)
+                       if own(e) and normalize(e['action']).startswith(('ENTRA', 'SURT'))]
             start = duration if state is True else None
             previous = duration
-            for event in changes:
+            for index, event in changes:
                 clock = clock_seconds(event.get('clock'))
                 entering = normalize(event['action']).startswith('ENTRA')
                 if clock is None or clock > duration or clock > previous:
@@ -69,8 +70,10 @@ def playing_time(matches, team, player, normalize, identity):
                             start = duration
                             continue
                         warn(f'P{period}: entrada sin salida previa')
-                    elif state is None and clock != duration:
-                        warn(f'P{period}: no se conoce el estado antes de la primera entrada')
+                    elif state is None and clock != duration and any(own(e) for e in rows[:index]):
+                        # A first entry implies a bench start, unless earlier
+                        # player actions show that an earlier stint is missing.
+                        warn(f'P{period}: acciones anteriores a la primera entrada; falta un intervalo')
                     state, start = True, clock
                 else:
                     if state is True:
