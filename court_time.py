@@ -42,6 +42,20 @@ def playing_time(matches, team, player, normalize, identity):
                 state = None
             last_period = period
             rows = [e for e in events if e['period'] == f'P{period}']
+            if period == 1 and state is None:
+                # Five distinct recorded starters identify the other players
+                # as substitutes. Do not infer this from a partial lineup or
+                # when the player's own actions contradict a bench start.
+                starters = {identity(e['player']) for e in rows
+                            if normalize(e['team']) == normalize(team)
+                            and e['player']
+                            and clock_seconds(e.get('clock')) == duration
+                            and normalize(e['action']).startswith('ENTRA')}
+                first_entry = next((i for i, e in enumerate(rows)
+                                    if own(e) and normalize(e['action']).startswith('ENTRA')), len(rows))
+                if len(starters) == 5 and player not in starters and not any(
+                        own(e) for e in rows[:first_entry]):
+                    state = False
             bench_start_known = state is False
             changes = [(i, e) for i, e in enumerate(rows)
                        if own(e) and normalize(e['action']).startswith(('ENTRA', 'SURT'))]
