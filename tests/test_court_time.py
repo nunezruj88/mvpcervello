@@ -179,3 +179,47 @@ class CourtTimeTests(unittest.TestCase):
         self.assertEqual(s['playing_seconds'], 120)
         self.assertFalse(s['playing_time_complete'])
 
+
+    def starters(self, count=5, team='MVP CERVELLÓ'):
+        return [event('06:00', 'Entra al camp', player=f'Titular {i}', team=team)
+                for i in range(count)]
+
+    def substitute_match(self, starters):
+        events = starters + [event('', 'Final de període', f'P{p}', player='', team='')
+                             for p in range(1, 9)]
+        events += [event('06:00', action, f'P{p}') for p, action in
+                   [(2, 'Entra al camp'), (3, 'Surt del camp'),
+                    (4, 'Entra al camp'), (5, 'Surt del camp'),
+                    (6, 'Entra al camp'), (8, 'Surt del camp')]]
+        return events
+
+    def test_full_initial_lineup_identifies_substitute_24_minutes(self):
+        for complete in (True, False):
+            s = self.calculate(self.substitute_match(self.starters()), complete=complete)
+            self.assertEqual(s['playing_seconds'], 1440)
+            self.assertTrue(s['playing_time_complete'])
+            self.assertEqual(s['playing_time_issues'], [])
+
+    def test_partial_duplicate_extra_or_opponent_lineup_is_not_enough(self):
+        for starters in (self.starters(4), self.starters(6),
+                         self.starters(4) + self.starters(1),
+                         self.starters(team='RIVAL')):
+            s = self.calculate(self.substitute_match(starters))
+            self.assertEqual(s['playing_seconds'], 1440)
+            self.assertFalse(s['playing_time_complete'])
+
+    def test_initial_lineup_does_not_hide_unrecorded_player_stint(self):
+        events = self.starters() + [event('05:00', 'Cistella de 2'),
+                                   event('04:00', 'Entra al camp'),
+                                   event('02:00', 'Surt del camp')]
+        s = self.calculate(events)
+        self.assertEqual(s['playing_seconds'], 120)
+        self.assertFalse(s['playing_time_complete'])
+        self.assertTrue(any('acciones anteriores' in x for x in s['playing_time_issues']))
+
+    def test_initial_lineup_preserves_starter_time(self):
+        events = self.starters(4) + [event('06:00', 'Entra al camp'),
+                                    event('02:00', 'Surt del camp')]
+        s = self.calculate(events)
+        self.assertEqual(s['playing_seconds'], 240)
+        self.assertTrue(s['playing_time_complete'])
